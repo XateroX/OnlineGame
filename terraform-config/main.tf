@@ -56,6 +56,9 @@ resource "google_cloudbuild_trigger" "server_default" {
     }
   }
   filename = "online-game-server/cloudbuild.yaml"
+  substitutions = {
+    _CLIENT_BASE_URL = local.client_urls[local.branches[count.index]]
+  }
 }
 
 resource "google_cloudbuild_trigger" "client_default" {

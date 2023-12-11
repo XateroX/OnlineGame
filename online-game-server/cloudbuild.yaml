@@ -1,6 +1,6 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'europe-west2-docker.pkg.dev/dp-rct-dev/online-game/image:$BRANCH_NAME', 'online-game-server/']
+  args: ['build', '--build-arg', 'CLIENT_BASE_URL=$_CLIENT_BASE_URL', '-t', 'europe-west2-docker.pkg.dev/dp-rct-dev/online-game/image:$BRANCH_NAME', 'online-game-server/']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'europe-west2-docker.pkg.dev/dp-rct-dev/online-game/image:$BRANCH_NAME']
 - name: 'gcr.io/cloud-builders/gcloud'
