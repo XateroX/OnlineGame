@@ -6,6 +6,8 @@ require('dotenv').config();
 const router = express.Router();
 const cors = require('cors');
 
+
+
 const corsOptions = {
     origin: (origin, callback) => {
         console.log("cors checking, origin: ", origin);
