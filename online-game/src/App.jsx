@@ -8,7 +8,7 @@ function App() {
   const apiClient = new Api()
 
   const [exampleText, setExampleText] = useState('getting text...')
-  const [serverurl, setServerurl] = useState(`${process.env.VITE_SERVER_URL}`)
+  const [serverurl, setServerurl] = useState(`${import.meta.env.VITE_SERVER_URL}`)
 
   useEffect(() => {
     const fetchInitData = async () => {

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 export default class Api {
     constructor(credential) {
-        this.apiUrl = process.env.VITE_SERVER_URL;
+        this.apiUrl = import.meta.env.VITE_SERVER_URL;
         console.log("apiUrl: ", this.apiUrl);
         this.credential = credential;
         let headers = {
