@@ -109,6 +109,16 @@ resource "google_cloud_run_service" "client_default" {
     spec {
       containers {
         image = "europe-west2-docker.pkg.dev/dp-rct-dev/online-game/client-image:${local.branches[count.index]}"
+
+        env {
+          name  = "CLIENT_BASE_URL"
+          value = local.client_urls[local.branches[count.index]]
+        }
+
+        env {
+          name  = "VITE_SERVER_URL"
+          value = local.server_urls[local.branches[count.index]]
+        }
       }
     }
   }
