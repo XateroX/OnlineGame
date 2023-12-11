@@ -1,3 +1,9 @@
+
+provider "google" {
+  project = "dp-rct-dev"
+  region  = "europe-west2"
+}
+
 locals {
   branches = ["dev", "test", "prod"]
 
@@ -15,33 +21,29 @@ locals {
 }
 
 data "google_secret_manager_secret_version" "client_url_dev" {
-  secret_id = "client_url_dev"
+  secret = "client_url_dev"
 }
 
 data "google_secret_manager_secret_version" "server_url_dev" {
-  secret_id = "server_url_dev"
+  secret = "server_url_dev"
 }
 
 data "google_secret_manager_secret_version" "client_url_test" {
-  secret_id = "client_url_test"
+  secret = "client_url_test"
 }
 
 data "google_secret_manager_secret_version" "server_url_test" {
-  secret_id = "server_url_test"
+  secret = "server_url_test"
 }
 
 data "google_secret_manager_secret_version" "client_url_prod" {
-  secret_id = "client_url_prod"
+  secret = "client_url_prod"
 }
 
 data "google_secret_manager_secret_version" "server_url_prod" {
-  secret_id = "server_url_prod"
+  secret = "server_url_prod"
 }
 
-provider "google" {
-  project = "dp-rct-dev"
-  region  = "europe-west2"
-}
 
 resource "google_cloudbuild_trigger" "server_default" {
   count = length(local.branches)

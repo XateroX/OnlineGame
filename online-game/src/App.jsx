@@ -2,7 +2,6 @@ import { useState, createContext, useEffect } from 'react'
 import './App.css'
 import Api from './api'
 
-
 export const APIContext = createContext([])
 
 function App() {
