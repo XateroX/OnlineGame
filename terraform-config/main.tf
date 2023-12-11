@@ -22,7 +22,7 @@ resource "google_cloudbuild_trigger" "server_default" {
 
 resource "google_cloudbuild_trigger" "client_default" {
   count = length(local.branches)
-  name = "trigger-${local.branches[count.index]}"
+  name = "client-trigger-${local.branches[count.index]}"
   github {
     owner = "XateroX"
     name  = "OnlineGame"
