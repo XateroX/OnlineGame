@@ -11,7 +11,7 @@ const cors = require('cors');
 const corsOptions = {
     origin: (origin, callback) => {
         console.log("cors checking, origin: ", origin);
-        if (origin.startsWith(process.env.CLIENT_BASE_URL)) {
+        if (origin.startsWith(import.meta.env.CLIENT_BASE_URL)) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
