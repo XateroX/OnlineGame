@@ -1,0 +1,7 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'europe-west2-docker.pkg.dev/dp-rct-dev/online-game/client-image:$BRANCH_NAME', 'online-game/']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'europe-west2-docker.pkg.dev/dp-rct-dev/online-game/client-image:$BRANCH_NAME']
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['run', 'deploy', 'client-image-$BRANCH_NAME', '--image', 'europe-west2-docker.pkg.dev/dp-rct-dev/online-game/client-image:$BRANCH_NAME', '--region', 'europe-west2', '--platform', 'managed', '--allow-unauthenticated']
