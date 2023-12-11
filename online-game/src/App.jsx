@@ -8,13 +8,12 @@ function App() {
   const apiClient = new Api()
 
   const [exampleText, setExampleText] = useState('getting text...')
-  const [exampleText2, setExampleText2] = useState({})
+  const [serverurl, setServerurl] = useState(`${import.meta.env.VITE_SERVER_URL}`)
 
   useEffect(() => {
     const fetchInitData = async () => {
       const res = await apiClient.getExample()
       setExampleText(res.data.exampleText)
-      setExampleText2(res.data)
       console.log(res)
     }
     fetchInitData()
@@ -23,7 +22,7 @@ function App() {
   return (
     <APIContext.Provider value={{ apiClient }}>
       <p>{exampleText}</p>
-      <p>{exampleText2}</p>
+      <p>server url: {serverurl}</p>
     </APIContext.Provider>
   )
 }
