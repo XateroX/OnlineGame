@@ -1,5 +1,5 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'europe-west2-docker.pkg.dev/dp-rct-dev/online-game/image:$BRANCH_NAME', '.']
+  args: ['build', '-t', 'europe-west2-docker.pkg.dev/dp-rct-dev/online-game/image:$BRANCH_NAME', 'online-game-server/']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'europe-west2-docker.pkg.dev/dp-rct-dev/online-game/image:$BRANCH_NAME']

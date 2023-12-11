@@ -17,7 +17,7 @@ resource "google_cloudbuild_trigger" "default" {
       branch = "^${local.branches[count.index]}$"
     }
   }
-  filename = "cloudbuild.yaml"
+  filename = "online-game-server/cloudbuild.yaml"
 }
 
 resource "google_cloud_run_service" "default" {
