@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+terrafrom.tfstate*
+online-game/node_modules
+online-game-server/node_modules
