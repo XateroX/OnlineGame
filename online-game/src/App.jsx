@@ -13,6 +13,14 @@ function App() {
   const [serverurl, setServerurl] = useState(`${import.meta.env.VITE_SERVER_URL}`)
   const [gameData, setGameData] = useState({})
 
+  // pick a random colour for the player and store it in a state
+  const [colour, setColour] = useState('#' + Math.floor(Math.random() * 16777215).toString(16))
+
+  useEffect(() => {
+    // Listen for 'connect' event from the server
+    socket.emit('join', { id: socket.id, colour: colour });
+  }, [])
+
   // position of the player
   const [position, setPosition] = useState({
     x: 0,
@@ -105,11 +113,11 @@ function App() {
     <APIContext.Provider value={{ apiClient }}>
       <p>{exampleText}</p>
       <p>server url: {serverurl}</p>
-      <Unit position={position} />
+      <Unit position={position} colour={colour} />
       {
         gameData["players"] &&
         Object.keys(gameData["players"]).map((id) => {
-          return <Unit position={gameData["players"][id]["state"]["position"]} />
+          return <Unit position={gameData["players"][id]["state"]["position"]} colour={gameData["players"][id]["state"]["colour"]} />
         })
       }
     </APIContext.Provider>

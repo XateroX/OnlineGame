@@ -1,3 +1,4 @@
 .unit {
     transition: all 0.05s ease-in-out;
+    border-radius: 50%;
 }
