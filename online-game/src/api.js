@@ -22,4 +22,22 @@ export default class Api {
     getExample = () => {
         return this.client.get('/example');
     };
+
+    createLobby = (lobbyName, maxPlayers, gameMode) => {
+        const data = {
+            lobbyName: lobbyName,
+            maxPlayers: maxPlayers,
+            gameMode: gameMode,
+        };
+        console.log('data');
+        console.log(data);
+        return this.client.post('/create-lobby', data);
+    }
+
+    findLobby = (lobbyCode) => {
+        const data = {
+            lobbyCode: lobbyCode,
+        };
+        return this.client.post(`/lobby-exists`, data);
+    }
 }
