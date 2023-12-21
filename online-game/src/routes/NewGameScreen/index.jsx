@@ -28,18 +28,29 @@ const NewGameScreen = () => {
         // make call to server to create lobby with lobbyCode, lobbyName, maxPlayers, gameMode
         // and set state of 'waiting' to true
         setWaiting(true);
-        const res = await apiClient.createLobby(lobbyName, maxPlayers, gameMode)
+        let res = await apiClient.createLobby(lobbyName, maxPlayers, gameMode)
         console.log('res');
         console.log(res);
 
         if (res.data.status != 'success' || res.status != 200) {
             setWaiting(false);
             setFailureCreatingLobby(true);
+            console.log('Failure creating lobby');
             return;
+        } else {
+            const lobbyCode = res.data.lobbyCode;
+            res = await apiClient.joinLobby(lobbyCode)
+            console.log('res');
+            console.log(res);
+            if (res.data.status != 'success' || res.status != 200) {
+                setWaiting(false);
+                setFailureCreatingLobby(true);
+                console.log('Failure joining lobby');
+                return;
+            } else {
+                window.location.href = '/lobbywaitingroom/' + lobbyCode + '/';
+            }
         }
-        const lobbyCode = res.data.lobbyCode;
-
-        window.location.href = '/lobbywaitingroom/' + lobbyCode + '/';
     };
 
     const dismissFailurePopup = () => {

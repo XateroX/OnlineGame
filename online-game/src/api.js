@@ -35,9 +35,16 @@ export default class Api {
     }
 
     findLobby = (lobbyCode) => {
-        const data = {
+        let data = {
             lobbyCode: lobbyCode,
         };
         return this.client.post(`/lobby-exists`, data);
+    }
+
+    joinLobby = (lobbyCode) => {
+        let data = {
+            lobbyCode: lobbyCode
+        };
+        return this.client.post(`/join-lobby`, data);
     }
 }

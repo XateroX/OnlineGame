@@ -1,4 +1,5 @@
 const { getInitialGameData, generateLobbyName } = require('./utils/utils.js');
+const { togglePlayerInLobbyReadyState } = require('./utils/lobbyUtils.js');
 
 const express = require('express');
 const socketIO = require('socket.io');
@@ -40,39 +41,52 @@ function updatePlayer(player) {
 
 
 let gameData = getInitialGameData();
+
+let serverTime = 0;
+
+// json of all the lobbies and their data
 let lobbyJsons = {};
+
+// json of all the players and their data
+let playerJsons = {};
 
 
 io.on('connection', (socket) => {
     console.log('a user connected:', socket.handshake.headers.referer);
 
-    // When a player connects, add them to the game data
-    gameData.players[socket.id] = {
+    // save that player
+    playerJsons[socket.id] = {
+        playerId: null, // this should ultimately be the socket.id but thats a change for another time
+        socket: socket,
+        lobbyCode: null,
         lastHeartbeat: Date.now(),
-        state: {
-            keys: [],
-            colour: "#000000",
-        },
+        ready: false,
     };
 
     // use heartbeat to check if clients are still connected
     socket.on('heartbeat', () => {
         //console.log('heartbeat from: ', socket.id);
 
-        if (!(socket.id in gameData.players)) {
+        if (!(socket.id in playerJsons)) {
             // Add the player to the game data
+            playerJsons[socket.id] = {
+                playerId: null, // this should ultimately be the socket.id but thats a change for another time
+                socket: socket,
+                lobbyCode: null,
+                lastHeartbeat: Date.now(),
+                ready: false,
+            };
         }
 
         // Update the last heartbeat time for the player
-        gameData.players[socket.id].lastHeartbeat = Date.now();
+        playerJsons[socket.id].lastHeartbeat = Date.now();
     });
 
     socket.on('keys', (keys) => {
         //console.log('keys: ', keys, ' from: ', socket.id);
 
         // update the player's state based on the keys
-        if (socket.id in gameData.players) {
-            gameData.players[socket.id].state.keys = keys;
+        if (socket.id in playerJsons) {
         }
     });
 
@@ -84,59 +98,63 @@ io.on('connection', (socket) => {
         // add the player to the lobby in the lobbyJsons
         try {
             // if the player isnt already in the lobby add them
-            if (!lobbyJsons[playerMeta["lobbyCode"]].players.map((playerMeta) => playerMeta.playerId).includes(playerMeta.playerId)) {
-                lobbyJsons[playerMeta["lobbyCode"]].players.push(playerMeta);
+            if (!Object.keys(lobbyJsons[playerMeta["lobbyCode"]].players).includes(playerMeta.playerId) && Object.keys(lobbyJsons[playerMeta["lobbyCode"]].players).length < lobbyJsons[playerMeta["lobbyCode"]].maxPlayers) {
+                lobbyJsons[playerMeta["lobbyCode"]].players[playerMeta["playerId"]] = playerMeta;
                 console.log('added player to lobby: ', playerMeta["lobbyCode"]);
-            } else {
-                console.log('player already in lobby: ', playerMeta["lobbyCode"]);
-            }
+                console.log('playerMeta["playerId"]: ', playerMeta["playerId"]);
 
-            io.to(playerMeta["lobbyCode"]).emit('lobbyData', { lobbyState: lobbyJsons[playerMeta["lobbyCode"]] });
-            io.to(playerMeta["lobbyCode"]).emit('join', { status: "complete", lobbyState: lobbyJsons[playerMeta["lobbyCode"]] });
+                // save some info about the player
+                playerJsons[socket.id].lobbyCode = playerMeta["lobbyCode"];
+                playerJsons[socket.id].lastHeartbeat = Date.now();
+                playerJsons[socket.id].playerId = playerMeta.playerId;
+
+                io.to(playerMeta["lobbyCode"]).emit('lobbyData', { lobbyState: lobbyJsons[playerMeta["lobbyCode"]] });
+                io.to(playerMeta["lobbyCode"]).emit('join', { status: "complete", lobbyState: lobbyJsons[playerMeta["lobbyCode"]] });
+            } else {
+                console.log('player already in lobby or lobby full: ', playerMeta["lobbyCode"]);
+            }
         } catch {
             console.log("failed to add player to lobby");
+        }
+    });
+
+    socket.on('toggleReady', (data) => {
+        console.log('toggleReady: ', data);
+        // toggle the player's ready state
+        console.log('lobbyJsons[data["lobbyCode"]].players: ', lobbyJsons[data["lobbyCode"]].players)
+        if (Object.keys(lobbyJsons[data["lobbyCode"]].players).includes(data.playerId)) {
+            postToggleLobbyJson = togglePlayerInLobbyReadyState(lobbyJsons[data["lobbyCode"]], data.playerId)
+            console.log('postToggleLobbyJson: ', postToggleLobbyJson);
+            lobbyJsons[data["lobbyCode"]].players[data.playerId] = postToggleLobbyJson.players[data.playerId];
+            console.log('lobbyJsons[data["lobbyCode"]].players post: ', lobbyJsons[data["lobbyCode"]].players)
+            io.to(data.lobbyCode).emit('lobbyData', { lobbyState: lobbyJsons[data.lobbyCode] });
         }
     });
 });
 
 
 setInterval(() => {
-    // Update the game time
-    gameData.time++;
-
-    // console log the player id list
-    //console.log('player id list: ', Object.keys(gameData.players));
-
-    // update all players based on their states
-    Object.keys(gameData.players).forEach((playerId) => {
-        gameData.players[playerId] = updatePlayer(gameData.players[playerId]);
-    });
+    // Update the server time
+    serverTime++;
 
     // all players whose last heartbeat was more than 5 seconds ago are disconnected
-    Object.keys(gameData.players).forEach((playerId) => {
-        if (Date.now() - gameData.players[playerId].lastHeartbeat > 1000) {
-            delete gameData.players[playerId];
+    Object.keys(playerJsons).forEach((ID) => {
+        if (Date.now() - playerJsons[ID].lastHeartbeat > 1000) {
+            delete playerJsons[ID];
             //console.log('deleted player: ', playerId);
-            io.emit('playerDisconnected', playerId);
+            io.emit('playerDisconnected', ID);
         }
     });
 
-    // Emit the updated game data to all connected clients
-    io.emit('gameData', gameData);
-
     //console.log('gameData: ', gameData);
-    //console.log('just emitted gameData with player count: ', Object.keys(gameData.players).length);
+    console.log('player count: ', Object.keys(playerJsons).length);
 }, 20);
-
-app.get('/', (req, res) => {
-    res.send('Hello, World!');
-});
 
 app.post('/create-lobby', (req, res) => {
     // create a new lobby
     // add the lobby to the lobby list
     // return the lobby code
-    const lobbyCode = generateLobbyName();
+    let lobbyCode = generateLobbyName();
 
     // if somehow the lobby code is already in use, generate a new one
     while (lobbyCode in lobbyJsons) {
@@ -149,7 +167,7 @@ app.post('/create-lobby', (req, res) => {
             lobbyCode: lobbyCode,
             maxPlayers: req.body.maxPlayers,
             gameMode: req.body.gameMode,
-            players: [],
+            players: {},
         };
         res.json({
             lobbyCode: lobbyCode,
@@ -173,6 +191,23 @@ app.post('/lobby-exists', (req, res) => {
     // return the lobby code
     const lobbyCode = req.body.lobbyCode;
     if (lobbyCode in lobbyJsons) {
+        res.json({
+            lobbyCode: lobbyCode,
+            status: 'success',
+        });
+    } else {
+        res.json({
+            status: 'failed',
+            lobbyJsons: lobbyJsons,
+        });
+    }
+});
+
+app.post('/join-lobby', (req, res) => {
+    // check if the lobby exists
+    // return the lobby code
+    const lobbyCode = req.body.lobbyCode;
+    if (lobbyCode in lobbyJsons && Object.keys(lobbyJsons[lobbyCode].players).length < lobbyJsons[lobbyCode].maxPlayers) {
         res.json({
             lobbyCode: lobbyCode,
             status: 'success',

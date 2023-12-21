@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client'
 
@@ -14,17 +14,36 @@ const LobbyWaitingScreen = () => {
     // get username from local storage
     const username = localStorage.getItem('username');
     const serverurl = `${import.meta.env.VITE_SERVER_URL}`
-    const socket = io(serverurl)
 
-    socket.on('lobbyUpdate', (data) => {
-        const { lobbyState } = data;
-        console.log('Received lobbyUpdate event');
-        setLobbyState(lobbyState);
-    });
+    // Create a ref for the socket
+    const socketRef = useRef();
 
     useEffect(() => {
+        // Initialize the socket
+        socketRef.current = io(serverurl);
+
+        // Send a heartbeat 10 times per second
+        const intervalId = setInterval(() => {
+            socketRef.current.emit('heartbeat', {});
+            console.log('heartbeat');
+        }, 100);
+
+        socketRef.current.on('join', (data) => {
+            console.log('Received join event');
+            const { status, lobbyState } = data;
+            setLobbyState(lobbyState);
+            checkStatus(status);
+        });
+
+        socketRef.current.on('lobbyData', (data) => {
+            const { lobbyState } = data;
+            console.log('Received lobbyData event');
+            console.log(lobbyState);
+            setLobbyState(lobbyState);
+        });
+
         const joinLobby = () => {
-            socket.emit('join', { playerId: playerId, lobbyCode: id, username: username });
+            socketRef.current.emit('join', { playerId: playerId, lobbyCode: id, username: username, ready: false });
             console.log('Sent join event');
         };
 
@@ -37,30 +56,25 @@ const LobbyWaitingScreen = () => {
             }
         };
 
-        socket.on('join', (data) => {
-            console.log('Received join event');
-            const { status, lobbyState } = data;
-            setLobbyState(lobbyState);
-            checkStatus(status);
-        });
-
         joinLobby();
+    }, []);
 
-        return () => {
-            socket.off('join');
-        };
-    }, [id]);
+    const handleReadyToggle = () => {
+        socketRef.current.emit('toggleReady', { playerId: playerId, lobbyCode: id });
+    };
 
     return (
         <div>
             <h1>Game Lobby</h1>
             <h2>{id}</h2>
             <p>Waiting for the game to start...</p>
-            <ul>
-                {lobbyState.players.map((player) => (
-                    <li key={player.playerId}>{player.username}</li>
-                ))}
-            </ul>
+            {Object.keys(lobbyState.players).map((socketid) => (
+                <div key={lobbyState.players[socketid].playerId}>
+                    <span style={{ color: lobbyState.players[socketid].ready ? 'green' : 'red' }}>●</span>
+                    {lobbyState.players[socketid].username}
+                </div>
+            ))}
+            <button onClick={handleReadyToggle}>Ready</button>
         </div>
     );
 };

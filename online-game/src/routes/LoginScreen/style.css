@@ -1,0 +1,13 @@
+.popup {
+    position: center;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 50%;
+    border-radius: 25%;
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
