@@ -9,7 +9,7 @@ class shell extends entity{
     shell(PVector pos, PVector vel, PVector acc, int shellOwner){
         super(pos, vel, acc);
         owner = shellOwner;
-        dim = new PVector(0.2,0.2); //Relative to tWidth, bounding radius(???)
+        dim = new PVector(0.08,0.08); //Relative to tWidth, bounding radius(???)
     }
 
     void calcDynamics(){

@@ -440,7 +440,7 @@ class calculator{
         Dim = d (in terms of # tWidths NOT pixels)
         Then sets velocity of entity to 0
         */
-        float scale        = 0.2;  //**Resolution of backwards moving (relative to frames)
+        float scale        = 0.1;  //**Resolution of backwards moving (relative to frames)
         int countermeasure = 0;    //**Safety against infinite loops
         PVector nVel = new PVector(scale*cEntity.vel.x, scale*cEntity.vel.y, scale*cEntity.vel.z);   //New velocity
         while(countermeasure < 1000){
@@ -463,6 +463,7 @@ class calculator{
                     break;}
             }
             if(!stillColliding){
+                println("FREE NOW");
                 break;}
             countermeasure++;
         }
@@ -537,7 +538,6 @@ class calculator{
         2. Consider the line projecting forward, see what it hits first
         3. Reflect according to this collision
         */
-        println("DEFLECTING");
         int limiter = 0;    //Should only occur 3 times max ish, usually only once
         //1
         while(limiter < 1000){
@@ -545,10 +545,11 @@ class calculator{
             //## MAY HAVE PROBLEMS IF TARGET IS SPAWNED INSIDE A BOX IMMEDIATELY ##
             //#####################################################################
             PVector boxCoord = cStage.get_tileCoord(cShell.pos);    //Tile shell appears in
+            PVector boxPos   = cStage.get_tilePos(boxCoord);        //Tile shell appears in
             boolean collisionOccurred = false;
             //## MAKE IT CHECK OUT OF BOUNDS ##
-            for(int j=max(0, int(boxCoord.y)-1); j<min(cStage.tiles.size(), int(boxCoord.y)+1); j++){          //##Check 3x3##
-                for(int i=max(0, int(boxCoord.x)-1); i<min(cStage.tiles.get(j).size(), int(boxCoord.y)+1); i++){      //##Check 3x3##
+            for(int j=max(0, int(boxCoord.y)-1); j<=min(cStage.tiles.size(), int(boxCoord.y)+1); j++){          //##Check 3x3##
+                for(int i=max(0, int(boxCoord.x)-1); i<=min(cStage.tiles.get(j).size(), int(boxCoord.x)+1); i++){      //##Check 3x3##
                     PVector currentCoord = new PVector(i,j);
                     PVector currentPos   = cStage.get_tilePos(currentCoord);
                     if(cStage.tiles.get(int(currentCoord.y)).get(int(currentCoord.x)).shellCollision){
@@ -562,24 +563,25 @@ class calculator{
                     break;}
             }
             if(collisionOccurred){
-                //###########
-                //## THIS NEEDS TO BE CHANGED TO A "KEEP MOVING UNTIL 3X3 HAS NO COLLISION"
-                //###########
-                //moveEntityOutCircleBoxCollision(cShell, boxPos, new PVector(cStage.tWidth, cStage.tWidth), 0, cStage);
+                moveEntityOutCircleBoxCollision(cShell, boxPos, new PVector(cStage.tWidth, cStage.tWidth), 0, cStage);
             }
             else{
                 break;}
             limiter++;
-            println("Limiter --> ",limiter);
         }
         //2
+        //###############################################################################################
+        //## THIS NEEDS TO BE FOUND USING EARLIEST POINT OF COLLISION, CONSIDER WHICH WALL IS REQUIRED ##
+        //###############################################################################################
         boolean isVerticalCollision = determine_earlyCollisionDir_wall(cShell.pos, vecUnit(cShell.vel), cStage);
+        //###############################################################################################
+        //## THIS NEEDS TO BE FOUND USING EARLIEST POINT OF COLLISION, CONSIDER WHICH WALL IS REQUIRED ##
+        //###############################################################################################
         //3
-        cShell.vel = new PVector(0,0);
-        //if(isVerticalCollision){
-        //    cShell.vel.x *= -1.0;}
-        //else{
-        //    cShell.vel.y *= -1.0;}
+        if(isVerticalCollision){
+            cShell.vel.x *= -1.0;}
+        else{
+            cShell.vel.y *= -1.0;}
 
 
 
