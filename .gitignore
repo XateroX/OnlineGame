@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 terraform.tfstate*
-.terraform
+.terraform.lock
 .terraform/*
 online-game/node_modules
 online-game-server/node_modules
