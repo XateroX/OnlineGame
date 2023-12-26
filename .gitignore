@@ -23,6 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-terrafrom.tfstate*
+terraform.tfstate*
+.terraform.lock
+.terraform/*
 online-game/node_modules
 online-game-server/node_modules
