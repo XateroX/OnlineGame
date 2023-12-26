@@ -448,8 +448,8 @@ class calculator{
             cEntity.pos.y -= nVel.y;
             cEntity.pos.z -= nVel.z;
             boolean stillColliding = false;
-            for(int j=int(p.y)-1; j<int(p.y)+1; j++){
-                for(int i=int(p.x)-1; i<int(p.x)+1; i++){
+            for(int j=max(0, int(p.y)-1); j<min(cStage.tiles.size(), int(p.y)+1); j++){
+                for(int i=max(0, int(p.x)-1); i<min(cStage.tiles.get(j).size(), int(p.x)+1); i++){
                     PVector newCoord = new PVector(i,j);
                     PVector newPos   = cStage.get_tilePos(newCoord);
                     if(cStage.tiles.get(int(newCoord.y)).get(int(newCoord.x)).shellCollision){
@@ -547,8 +547,8 @@ class calculator{
             PVector boxCoord = cStage.get_tileCoord(cShell.pos);    //Tile shell appears in
             boolean collisionOccurred = false;
             //## MAKE IT CHECK OUT OF BOUNDS ##
-            for(int j=int(boxCoord.y)-1; j<int(boxCoord.y)+1; j++){          //##Check 3x3##
-                for(int i=int(boxCoord.x)-1; i<int(boxCoord.x)+1; i++){      //##Check 3x3##
+            for(int j=max(0, int(boxCoord.y)-1); j<min(cStage.tiles.size(), int(boxCoord.y)+1); j++){          //##Check 3x3##
+                for(int i=max(0, int(boxCoord.x)-1); i<min(cStage.tiles.get(j).size(), int(boxCoord.y)+1); i++){      //##Check 3x3##
                     PVector currentCoord = new PVector(i,j);
                     PVector currentPos   = cStage.get_tilePos(currentCoord);
                     if(cStage.tiles.get(int(currentCoord.y)).get(int(currentCoord.x)).shellCollision){
