@@ -14,6 +14,8 @@ const NewGameScreen = () => {
     const [username, setUsername] = useState('');
     const [waiting, setWaiting] = useState(false);
     const [failureCreatingLobby, setFailureCreatingLobby] = useState(false); // Added failureCreatingLobby state
+    const [mapSizeX, setMapSizeX] = useState(10); // Added mapSizeX state
+    const [mapSizeY, setMapSizeY] = useState(10); // Added mapSizeY state
 
     useEffect(() => {
         const cachedUsername = localStorage.getItem('username');
@@ -25,10 +27,10 @@ const NewGameScreen = () => {
     const handleCreateLobby = async () => {
         // Logic for creating a new lobby with the provided settings
 
-        // make call to server to create lobby with lobbyCode, lobbyName, maxPlayers, gameMode
+        // make call to server to create lobby with lobbyCode, lobbyName, maxPlayers, gameMode, mapSizeX, mapSizeY
         // and set state of 'waiting' to true
         setWaiting(true);
-        let res = await apiClient.createLobby(lobbyName, maxPlayers, gameMode)
+        let res = await apiClient.createLobby(lobbyName, maxPlayers, gameMode, mapSizeX, mapSizeY)
         console.log('res');
         console.log(res);
 
@@ -144,6 +146,24 @@ const NewGameScreen = () => {
                     <option value="team">Team</option>
                     <option value="free-for-all">Free for All</option>
                 </select>
+            </label>
+            <br />
+            <label>
+                Map Size X: {/* Added Map Size X field */}
+                <input
+                    type="number"
+                    value={mapSizeX}
+                    onChange={(e) => setMapSizeX(parseInt(e.target.value))}
+                />
+            </label>
+            <br />
+            <label>
+                Map Size Y: {/* Added Map Size Y field */}
+                <input
+                    type="number"
+                    value={mapSizeY}
+                    onChange={(e) => setMapSizeY(parseInt(e.target.value))}
+                />
             </label>
             <br />
             <button onClick={handleCreateLobby}>Create Lobby</button>

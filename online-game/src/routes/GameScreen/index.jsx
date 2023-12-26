@@ -1,8 +1,10 @@
-import { useState, createContext, useEffect, useRef, useMemo } from 'react'
+import { useState, createContext, useContext, useEffect, useRef, useMemo } from 'react'
 import './style.css'
 import Api from '../../api.js'
 import { getInitialGameData } from '../../utils/utils.js'
 import { useParams } from 'react-router-dom';
+import { SocketContext } from '../../SocketContext';
+import Game from './Game/index.jsx'
 
 export const APIContext = createContext([])
 
@@ -10,46 +12,19 @@ function GameScreen() {
     const { id } = useParams();
     const apiClient = useMemo(() => new Api(), [])
 
+    const { socket, isConnected } = useContext(SocketContext);
+
     const [serverurl, setServerurl] = useState(`${import.meta.env.VITE_SERVER_URL}`)
-    const [gameData, setGameData] = useState(getInitialGameData(socket.id))
-
-    // pick a random colour for the player and store it in a state
-    const [colour, setColour] = useState('#' + Math.floor(Math.random() * 16777215).toString(16))
-
-    useEffect(() => {
-        // tell the server we joined and our meta info
-        socket.emit('join', { id: socket.id, colour: colour });
-    }, [])
+    const [gameData, setGameData] = useState(getInitialGameData())
 
     const keysPressed = useRef(new Set());
     const prevKeysPressed = useRef(new Set());
-
-    // connect to the server using socket
-    useEffect(() => {
-        const fetchInitData = async () => {
-            const res = await apiClient.getExample()
-            setExampleText(res.data.exampleText)
-            console.log(res)
-        }
-        fetchInitData()
-
-        // Send a heartbeat 10 times per second
-        const intervalId = setInterval(() => {
-            socket.emit('heartbeat', {});
-            console.log('heartbeat');
-        }, 100);
-
-        // Cleanup function
-        return () => {
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-        };
-    }, [])
+    const mousePosition = useRef({ x: 0, y: 0 })
+    const prevMousePosition = useRef({ x: 0, y: 0 })
 
     // set up controller listeners
     useEffect(() => {
-
+        if (!isConnected) return;
         const handleKeyDown = (event) => {
             keysPressed.current.add(event.key)
         }
@@ -58,20 +33,32 @@ function GameScreen() {
             keysPressed.current.delete(event.key)
         }
 
+        const handleMouse = (event) => {
+            mousePosition.current.x = event.clientX
+            mousePosition.current.y = event.clientY
+
+            console.log("mousePosition");
+            console.log(mousePosition);
+        }
+
         window.addEventListener('keydown', handleKeyDown)
         window.addEventListener('keyup', handleKeyUp)
 
-        const updatePosition = () => {
-            console.log("updatePosition ");
-            console.log(keysPressed.current);
-            console.log(prevKeysPressed.current);
-            // if pressed keys have changed since last time
-            if (!isEqual(prevKeysPressed.current, keysPressed.current)) {
-                console.log("emitted keys");
+        // add a mouse movement listener
+        window.addEventListener('mousemove', handleMouse)
+
+        const updateInput = () => {
+            //console.log("updateInput ");
+            //console.log(keysPressed.current);
+            //console.log(prevKeysPressed.current);
+            // if pressed keys have changed since last time, emit them
+            if (!isEqual(prevKeysPressed.current, keysPressed.current) || prevMousePosition.current.x != mousePosition.current.x || prevMousePosition.current.y != mousePosition.current.y) {
+                console.log("emitted keys and mouse");
                 prevKeysPressed.current = new Set(keysPressed.current);
-                socket.emit('keys', Array.from(keysPressed.current))
+                prevMousePosition.current = { ...mousePosition.current }
+                socket.emit('inputs', { keys: Array.from(keysPressed.current), mouse: mousePosition.current, playerId: sessionStorage.getItem('playerId') })
             }
-            requestAnimationFrame(updatePosition)
+            requestAnimationFrame(updateInput)
         }
 
         const isEqual = (setA, setB) => {
@@ -86,57 +73,39 @@ function GameScreen() {
             return true;
         }
 
-        updatePosition()
-
-        // Listen for 'position' events from the server
-        socket.on('gameData', (gameData) => {
-            setGameData(gameData)
-
-            // Find us in the game data
-            try {
-                const me = gameData.players[socket.id]
-                if (me) {
-                    setPosition({
-                        x: me.state.position.x,
-                        y: me.state.position.y
-                    })
-                }
-            } catch (err) {
-                console.log(err)
-            }
-        })
+        updateInput()
 
         // Cleanup function
         return () => {
             // Remove event listener
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, []);
+    }, [isConnected]);
 
-    console.log("gameData[players]");
-    console.log(gameData["players"]);
+    // set up game loop listeners
+    useEffect(() => {
+        if (!isConnected) return;
 
-    console.log("Object.keys(gameData['players'])");
-    try {
-        console.log(Object.keys(gameData["players"]));
-    } catch (error) {
-        console.log(error);
-    }
+        console.log("game loop started listening");
+        // Listen for gameJson events from the server
+        socket.on('gameJson', (gameJson) => {
+            setGameData(gameJson)
+            console.log("gameJson");
+            console.log(gameJson);
+        })
 
+        const joinLobby = () => {
+            socket.emit('join', { lobbyCode: id });
+            console.log('Sent join event');
+        };
+
+        joinLobby();
+    }, [isConnected]);
 
     return (
-        <APIContext.Provider value={{ apiClient }}>
-            {
-                gameData["mapSizeX"] && gameData["mapSizeY"] &&
-                [...Array(gameData["mapSizeY"])].map((_, y) => (
-                    <div className="row" key={y}>
-                        {[...Array(gameData["mapSizeX"])].map((_, x) => (
-                            <div className="square" key={x}></div>
-                        ))}
-                    </div>
-                ))
-            }
-        </APIContext.Provider>
+        <div>
+            <Game gameData={gameData} />
+        </div>
     )
 }
 

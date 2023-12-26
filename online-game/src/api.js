@@ -23,11 +23,13 @@ export default class Api {
         return this.client.get('/example');
     };
 
-    createLobby = (lobbyName, maxPlayers, gameMode) => {
+    createLobby = (lobbyName, maxPlayers, gameMode, mapSizeX, mapSizeY) => {
         const data = {
             lobbyName: lobbyName,
             maxPlayers: maxPlayers,
             gameMode: gameMode,
+            mapSizeX: mapSizeX,
+            mapSizeY: mapSizeY,
         };
         console.log('data');
         console.log(data);

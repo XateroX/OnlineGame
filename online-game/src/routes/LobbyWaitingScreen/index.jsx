@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client'
+import { SocketContext } from '../../SocketContext';
+
 
 const LobbyWaitingScreen = () => {
     const { id } = useParams();
@@ -13,37 +15,57 @@ const LobbyWaitingScreen = () => {
 
     // get username from local storage
     const username = localStorage.getItem('username');
-    const serverurl = `${import.meta.env.VITE_SERVER_URL}`
+    //const serverurl = `${import.meta.env.VITE_SERVER_URL}`
 
     // Create a ref for the socket
-    const socketRef = useRef();
+    const { socket, isConnected } = useContext(SocketContext);
+
+    console.log('socket');
+    console.log(socket);
 
     useEffect(() => {
+
+        if (!isConnected) {
+            console.log('socket not initialized');
+            return;
+        }
+
         // Initialize the socket
-        socketRef.current = io(serverurl);
+        //socket.current = io(serverurl);
 
-        // Send a heartbeat 10 times per second
-        const intervalId = setInterval(() => {
-            socketRef.current.emit('heartbeat', {});
-            console.log('heartbeat');
-        }, 100);
-
-        socketRef.current.on('join', (data) => {
+        socket.on('join', (data) => {
             console.log('Received join event');
             const { status, lobbyState } = data;
             setLobbyState(lobbyState);
             checkStatus(status);
         });
 
-        socketRef.current.on('lobbyData', (data) => {
+        socket.on('lobbyData', (data) => {
             const { lobbyState } = data;
             console.log('Received lobbyData event');
             console.log(lobbyState);
             setLobbyState(lobbyState);
+
+            // if all players in the lobby are ready=true then change url to gamescreen
+            let allPlayersReady = true;
+            Object.keys(lobbyState.players).forEach((playerId) => {
+                if (!lobbyState.players[playerId].ready) {
+                    allPlayersReady = false;
+                }
+            });
+            if (allPlayersReady) {
+                window.location.href = '/game/' + lobbyState.lobbyCode + '/';
+            }
         });
 
         const joinLobby = () => {
-            socketRef.current.emit('join', { playerId: playerId, lobbyCode: id, username: username, ready: false });
+            socket.emit('join', {
+                playerId: playerId,
+                lobbyCode: id,
+                username: username,
+                ready: false,
+                color: '#' + Math.floor(Math.random() * 16777215).toString(16)
+            });
             console.log('Sent join event');
         };
 
@@ -57,10 +79,10 @@ const LobbyWaitingScreen = () => {
         };
 
         joinLobby();
-    }, []);
+    }, [isConnected]);
 
     const handleReadyToggle = () => {
-        socketRef.current.emit('toggleReady', { playerId: playerId, lobbyCode: id });
+        socket.emit('toggleReady', { playerId: playerId, lobbyCode: id });
     };
 
     return (

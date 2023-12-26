@@ -1,17 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Api from '../../api.js'
-import { io } from 'socket.io-client'
 
 const LobbyScreen = () => {
     const apiClient = useMemo(() => new Api(), [])
 
     const [lobbyCode, setLobbyCode] = useState('');
     const [username, setUsername] = useState(localStorage.getItem('username'));
-
-    const serverurl = `${import.meta.env.VITE_SERVER_URL}`
-    useEffect(() => {
-        const socket = io(serverurl)
-    }, []);
 
 
     const [failureJoiningLobby, setFailureJoiningLobby] = useState(false); // Added failureCreatingLobby state
