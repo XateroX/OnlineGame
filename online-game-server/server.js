@@ -1,5 +1,6 @@
 const { updateGame, getInitialGameData, generateLobbyName } = require('./utils/utils.js');
 const { togglePlayerInLobbyReadyState } = require('./utils/lobbyUtils.js');
+const { STRUCTURE_LIST } = require('./utils/gameUtils.js');
 
 const express = require('express');
 const socketIO = require('socket.io');
@@ -98,16 +99,47 @@ io.on('connection', (socket) => {
     });
 
     socket.on('inputs', (inputs) => {
-        console.log('inputs: ', inputs, ' from: ', inputs.playerId);
-        console.log('inputs.keys');
-        console.log(inputs.keys);
-        console.log('inputs.mouse');
-        console.log(inputs.mouse);
+        //console.log('inputs: ', inputs, ' from: ', inputs.playerId);
+        //console.log('inputs.keys');
+        //console.log(inputs.keys);
+        //console.log('inputs.mouse');
+        //console.log(inputs.mouse);
 
         // update the player's state based on the keys
         if (inputs.playerId in playerJsons && gameJsons[playerJsons[inputs.playerId].lobbyCode]) {
-            gameJsons[playerJsons[inputs.playerId].lobbyCode].players[inputs.playerId].keys = inputs.keys;
-            gameJsons[playerJsons[inputs.playerId].lobbyCode].players[inputs.playerId].mouse = inputs.mouse;
+            let player = gameJsons[playerJsons[inputs.playerId].lobbyCode].players[inputs.playerId];
+
+            player.keys = inputs.keys;
+            player.mouse = inputs.mouse;
+            player.mouseButtons = inputs.mouseButtons;
+
+            player.building = false;
+            if (player.keys.includes('b')) {
+                player.building = true;
+                //console.log("player building is " + player.building);
+                if (player.keys.includes('n')) {
+                    player.buildingIndex += 1;
+                    //console.log("(n) player building index is " + player.buildingIndex);
+                }
+                if (player.keys.includes('v')) {
+                    player.buildingIndex -= 1;
+                    if (player.buildingIndex < 0) {
+                        player.buildingIndex = 0;
+                    }
+                    //console.log("(v) player building index is " + player.buildingIndex);
+                }
+            }
+            gameJsons[playerJsons[inputs.playerId].lobbyCode].players[inputs.playerId] = player;
+
+            // if the player pressed the left mouse button then make a new structure at their position
+            if (player.mouseButtons.includes(0)) {
+                let newStructure = STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length];
+                newStructure.position = { x: player.x, y: player.y };
+                newStructure.id = inputs.playerId + '_' + (player.buildingIndex % STRUCTURE_LIST.length).toString();
+                newStructure.player = inputs.playerId;
+                newStructure.color = player.color;
+                gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[newStructure.id] = newStructure;
+            }
 
             // update the player in the gameJsons
             gameJsons[playerJsons[inputs.playerId].lobbyCode] = updatePlayer(gameJsons[playerJsons[inputs.playerId].lobbyCode], inputs.playerId);
@@ -192,7 +224,7 @@ setInterval(() => {
         //console.log('gameJsons[lobbyCode]: ', gameJsons[lobbyCode]);
         gameJsons[lobbyCode] = updateGame(gameJsons[lobbyCode]);
         io.to(lobbyCode).emit('gameJson', gameJsons[lobbyCode]);
-        console.log('sent gameJson to lobby: ', lobbyCode);
+        //console.log('sent gameJson to lobby: ', lobbyCode);
     });
 
     // all players whose last heartbeat was more than 5 seconds ago are disconnected
@@ -206,7 +238,7 @@ setInterval(() => {
 
     //console.log('gameData: ', gameData);
     console.log('player count: ', Object.keys(playerJsons).length);
-}, 20);
+}, 10);
 
 setInterval(() => {
     // all lobbies have all players who are no longer in playersJson removed

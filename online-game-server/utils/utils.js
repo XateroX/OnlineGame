@@ -31,6 +31,11 @@ function getInitialGameData(lobbyJson) {
             color: lobbyJson.players[playerId].color,
             username: lobbyJson.players[playerId].username,
             hoverRadius: lobbyJson.players[playerId].hoverRadius,
+            keys: [],
+            mouse: [],
+            mouseButtons: [],
+            building: false,
+            buildingIndex: 0,
         };
 
         const structureX = Math.floor(Math.random() * (lobbyJson.mapSizeX - quarterMapWidth * 2)) + quarterMapWidth;
@@ -152,6 +157,9 @@ function generateLobbyName() {
 }
 
 function updateGame(gameJsonCurrent) {
+    //console.log("updating game");
+    //console.log(gameJsonCurrent);
+
     // randomly with a 0.1% chance, spawn a rock at a random edge of the map moving in a random direction
     if (Math.random() < 0.01) {
         let health = Math.random() * 100;
@@ -199,14 +207,22 @@ function updateGame(gameJsonCurrent) {
         gameJsonCurrent.rocks[rock.id] = rock;
     }
 
+    // looking at the keys of the players objects, update the player json based on the input
+    for (let playerInd in Object.keys(gameJsonCurrent.players)) {
+        let playerId = Object.keys(gameJsonCurrent.players)[playerInd];
+        let player = gameJsonCurrent.players[playerId];
+
+        gameJsonCurrent.players[playerId] = player;
+    }
+
     // update rock positions
     if (gameJsonCurrent.rocks) {
-        console.log("updating rocks");
-        console.log(gameJsonCurrent.rocks);
+        //console.log("updating rocks");
+        //console.log(gameJsonCurrent.rocks);
         for (let rockId in Object.keys(gameJsonCurrent.rocks)) {
             rockId = Object.keys(gameJsonCurrent.rocks)[rockId];
             let rock = gameJsonCurrent.rocks[rockId];
-            console.log("updating rock " + rockId);
+            //console.log("updating rock " + rockId);
             rock.x += rock.dx;
             rock.y += rock.dy;
 
@@ -220,10 +236,10 @@ function updateGame(gameJsonCurrent) {
 
                 // if player is hovering over the rock, decrease rock health and update player points
                 if (distance <= player.hoverRadius) {
-                    console.log("player " + playerId + " is hovering over rock " + rockId);
+                    //console.log("player " + playerId + " is hovering over rock " + rockId);
                     rock.health -= 1;
                     if (rock.health <= 0) {
-                        console.log("rock " + rockId + " has died");
+                        //console.log("rock " + rockId + " has died");
                         rock.alive = false;
 
                         // if player points are not initialized, initialize them

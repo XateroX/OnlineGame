@@ -3,6 +3,7 @@ import React from 'react';
 import './style.css';
 import PlayerCircle from '../../../components/Player';
 import Square from '../../../components/Square';
+import { hexToRgb, generateBoxShadows } from '../../../utils/utils';
 
 const Game = (props) => {
     const { gameData } = props;
@@ -49,6 +50,31 @@ const Game = (props) => {
                         })}
                     </div>
                 ))}
+
+            {gameData.structures && Object.keys(gameData.structures).map((structId) => {
+                const structJson = gameData.structures[structId];
+                const structPosition = {
+                    top: structJson.position.y * squareSize,
+                    left: structJson.position.x * squareSize,
+                };
+                const color = gameData.players[structJson.player] && gameData.players[structJson.player].color || 'white';
+                let rgb = hexToRgb(color);
+                return (
+                    <div
+                        className={structJson.type}
+                        key={structId}
+                        style={{
+                            backgroundColor: `${color}`,
+                            width: squareSize,
+                            height: squareSize,
+                            border: `1px solid #444444`,
+                            top: structPosition.top,
+                            left: structPosition.left,
+                            boxShadow: generateBoxShadows(rgb, 5)
+                        }}
+                    ></div>
+                );
+            })}
             {gameData.players &&
                 Object.values(gameData.players).map((player, index) => (
                     <PlayerCircle
@@ -81,6 +107,7 @@ const Game = (props) => {
                     ></div>
                 );
             })}
+
             <div style={{ position: 'absolute', top: 0, right: 0, color: 'Yellow', backgroundColor: 'Black' }}>
                 Points: {gameData.players[playerId] && Math.round(gameData.players[playerId].points) || 0}
             </div>
