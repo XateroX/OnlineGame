@@ -1,87 +1,6 @@
-function getRandomPosition(min, max) {
-    return Math.random() * (max - min) + min;
-}
-
-function updatePlayer(player) {
-    // set the acceleration
-    player.state.acceleration.x = 0;
-    player.state.acceleration.y = 0.1;
-
-    for (key in player.state.keys) {
-        key = player.state.keys[key];
-
-        if (key == 'a') {
-            player.state.velocity.x += -0.1;
-        }
-        if (key == 'd') {
-            player.state.velocity.x += 0.1;
-        }
-        if (key == 'w') {
-            player.state.velocity.y += -0.1;
-        }
-        if (key == 's') {
-            player.state.velocity.y += 0.1;
-        }
-    }
-
-    // physics
-    player.state.velocity.x += player.state.acceleration.x;
-    player.state.velocity.y += player.state.acceleration.y;
-
-    player.state.position.x += player.state.velocity.x;
-    player.state.position.y += player.state.velocity.y;
-
-    //if the player goes out of bounds, reflect them off the wall they collided with
-    if (player.state.position.x < -30 || player.state.position.x > 60) {
-        player.state.position.x = Math.max(-30, Math.min(60, player.state.position.x)); // clamp the position
-        player.state.velocity.x *= -1; // reflect the velocity
-    }
-    if (player.state.position.y < 0 || player.state.position.y > 30) {
-        player.state.position.y = Math.max(0, Math.min(30, player.state.position.y)); // clamp the position
-        player.state.velocity.y *= -1; // reflect the velocity
-    }
-
-    //player.state.velocity.x *= 0.999; // friction
-    //player.state.velocity.y *= 0.999; // friction
-
-    // if the distance to the other players is less than 10, reflect the velocity
-    Object.keys(gameData.players).forEach((playerId) => {
-        if (playerId != player.id) {
-            console.log('playerId: ', playerId);
-            console.log('player.id: ', player.id);
-            let otherPlayer = gameData.players[playerId];
-            let dx = player.state.position.x - otherPlayer.state.position.x;
-            let dy = player.state.position.y - otherPlayer.state.position.y;
-            let distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance < 10 && distance > 0) {
-                // Calculate the contact point
-                // Remove unused variables
-                // let contactPointX = (player.state.position.x + otherPlayer.state.position.x) / 2;
-                // let contactPointY = (player.state.position.y + otherPlayer.state.position.y) / 2;
-
-                // Calculate the normal vector of the contact point
-                let normalX = (player.state.position.x - otherPlayer.state.position.x) / distance;
-                let normalY = (player.state.position.y - otherPlayer.state.position.y) / distance;
-
-                // Calculate the dot product of velocity and normal vector
-                let dotProduct = player.state.velocity.x * normalX + player.state.velocity.y * normalY;
-
-                // Calculate the reflection vector
-                let reflectionX = player.state.velocity.x - 2 * dotProduct * normalX;
-                let reflectionY = player.state.velocity.y - 2 * dotProduct * normalY;
-
-                // Update the player's velocity with the reflection vector
-                player.state.velocity.x = reflectionX;
-                player.state.velocity.y = reflectionY;
-
-                player.state.position.x += player.state.velocity.x;
-                player.state.position.y += player.state.velocity.y;
-            }
-        }
-    });
-
-    return player;
-}
+const { updateGame, getInitialGameData, generateLobbyName } = require('./utils/utils.js');
+const { togglePlayerInLobbyReadyState } = require('./utils/lobbyUtils.js');
+const { STRUCTURE_LIST } = require('./utils/gameUtils.js');
 
 const express = require('express');
 const socketIO = require('socket.io');
@@ -106,140 +25,337 @@ const corsOptions = {
 
 const app = express();
 app.use(cors(corsOptions));
+app.use(express.json());
 const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 
 const io = socketIO(server, { cors: corsOptions });
 
-let gameData = {
-    time: 0,
-    players: {},
-    // other game data...
-};
+
+function getRandomPosition(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+function updatePlayer(gameJson, playerId) {
+    let player = gameJson.players[playerId];
+
+    // update the players position (x,y) to be the mouse position but calculating which 
+    // square on the board the mouse is in using the mapSizeX and mapSizeY and squareSize
+    player.x = Math.floor(player.mouse.x / gameJson.squareSize);
+    player.y = Math.floor(player.mouse.y / gameJson.squareSize);
+
+    // restrict the player to the map
+    if (player.x < 0) {
+        player.x = 0;
+    }
+    if (player.x > gameJson.mapSizeX - 1) {
+        player.x = gameJson.mapSizeX - 1;
+    }
+    if (player.y < 0) {
+        player.y = 0;
+    }
+    if (player.y > gameJson.mapSizeY - 1) {
+        player.y = gameJson.mapSizeY - 1;
+    }
+
+    gameJson.players[playerId] = player;
+
+    return gameJson;
+}
+
+let serverTime = 0;
+
+// json of all the lobbies and their data
+let lobbyJsons = {};
+
+// json of all the games and their data
+let gameJsons = {};
+
+// json of all the players and their data
+let playerJsons = {};
+
 
 io.on('connection', (socket) => {
     console.log('a user connected:', socket.handshake.headers.referer);
 
-    // When a player connects, add them to the game data
-    gameData.players[socket.id] = {
-        lastHeartbeat: Date.now(),
-        state: {
-            position: {
-                x: getRandomPosition(-30, 60),
-                y: getRandomPosition(0, 30),
-            },
-            velocity: {
-                x: 0,
-                y: 0,
-            },
-            acceleration: {
-                x: 0,
-                y: 0,
-            },
-            keys: [],
-            colour: "#000000",
-        },
-    };
-
     // use heartbeat to check if clients are still connected
-    socket.on('heartbeat', () => {
-        console.log('heartbeat from: ', socket.id);
+    socket.on('heartbeat', (data) => {
+        //console.log('heartbeat from: ', socket.id);
+        let playerId = data.playerId;
 
-        if (!(socket.id in gameData.players)) {
+        if (!(playerId in playerJsons)) {
             // Add the player to the game data
-            gameData.players[socket.id] = {
+            playerJsons[playerId] = {
+                playerId: playerId, // this should ultimately be the socket.id but thats a change for another time
+                socket: socket,
+                lobbyCode: null,
                 lastHeartbeat: Date.now(),
-                state: {
-                    position: {
-                        x: getRandomPosition(-30, 60),
-                        y: getRandomPosition(0, 30),
-                    },
-                    velocity: {
-                        x: 0,
-                        y: 0,
-                    },
-                    acceleration: {
-                        x: 0,
-                        y: 0,
-                    },
-                    keys: [],
-                    colour: "#000000",
-                },
+                ready: false,
             };
         }
 
         // Update the last heartbeat time for the player
-        gameData.players[socket.id].lastHeartbeat = Date.now();
+        playerJsons[playerId].lastHeartbeat = Date.now();
     });
 
-    socket.on('keys', (keys) => {
-        //console.log('keys: ', keys, ' from: ', socket.id);
+    socket.on('inputs', (inputs) => {
+        //console.log('inputs: ', inputs, ' from: ', inputs.playerId);
+        //console.log('inputs.keys');
+        //console.log(inputs.keys);
+        //console.log('inputs.mouse');
+        //console.log(inputs.mouse);
 
         // update the player's state based on the keys
-        if (socket.id in gameData.players) {
-            gameData.players[socket.id].state.keys = keys;
+        if (inputs.playerId in playerJsons && gameJsons[playerJsons[inputs.playerId].lobbyCode]) {
+            let player = gameJsons[playerJsons[inputs.playerId].lobbyCode].players[inputs.playerId];
+
+            player.keys = inputs.keys;
+            player.mouse = inputs.mouse;
+            player.mouseButtons = inputs.mouseButtons;
+
+            player.building = false;
+            if (player.keys.includes('b')) {
+                player.building = true;
+                //console.log("player building is " + player.building);
+                if (player.keys.includes('n')) {
+                    player.buildingIndex += 1;
+                    //console.log("(n) player building index is " + player.buildingIndex);
+                }
+                if (player.keys.includes('v')) {
+                    player.buildingIndex -= 1;
+                    if (player.buildingIndex < 0) {
+                        player.buildingIndex = 0;
+                    }
+                    //console.log("(v) player building index is " + player.buildingIndex);
+                }
+            }
+            gameJsons[playerJsons[inputs.playerId].lobbyCode].players[inputs.playerId] = player;
+
+            // if the player pressed the left mouse button then make a new structure at their position
+            if (player.mouseButtons.includes(0)) {
+                // if the player has sufficient resources, create the structure
+                if (player.points >= STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length].cost) {
+                    // if the space the structure will be placed has no structure yet then proceed
+                    let spaceAvailable = true;
+                    Object.keys(gameJsons[playerJsons[inputs.playerId].lobbyCode].structures).forEach((structureId) => {
+                        if (
+                            gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].position.x == player.x &&
+                            gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].position.y == player.y) {
+                            spaceAvailable = false;
+                        }
+                    });
+                    if (spaceAvailable) {
+                        let structureTemplate = STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length];
+                        let newStructure = Object.assign({}, structureTemplate); // create a new instance
+                        newStructure.position = { x: player.x, y: player.y };
+                        newStructure.id = inputs.playerId + '_' + (player.buildingIndex % STRUCTURE_LIST.length) + '_' + Math.random().toString(36).substring(2, 11);
+                        newStructure.player = inputs.playerId;
+                        newStructure.color = player.color;
+                        gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[newStructure.id] = newStructure;
+
+                        // take the points away from the player
+                        player.points -= STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length].cost;
+                        gameJsons[playerJsons[inputs.playerId].lobbyCode].players[inputs.playerId] = player;
+                    }
+                }
+            }
+
+            // update the player in the gameJsons
+            gameJsons[playerJsons[inputs.playerId].lobbyCode] = updatePlayer(gameJsons[playerJsons[inputs.playerId].lobbyCode], inputs.playerId);
         }
     });
 
-    socket.on('join', (playerData) => {
+    socket.on('join', (playerMeta) => {
         console.log('user joined');
-        console.log('playerData: ', playerData);
-        if (!(socket.id in gameData.players)) {
+        console.log('playerMeta: ', playerMeta);
+        socket.join(playerMeta["lobbyCode"]);
+
+        // if the player is not already registered, register them
+        if (!(playerMeta["playerId"] in playerJsons)) {
             // Add the player to the game data
-            gameData.players[socket.id] = {
+            playerJsons[playerMeta["playerId"]] = {
+                playerId: playerMeta["playerId"], // this should ultimately be the socket.id but thats a change for another time
+                socket: socket,
+                lobbyCode: null,
                 lastHeartbeat: Date.now(),
-                state: {
-                    position: {
-                        x: getRandomPosition(-30, 60),
-                        y: getRandomPosition(0, 30),
-                    },
-                    velocity: {
-                        x: 0,
-                        y: 0,
-                    },
-                    acceleration: {
-                        x: 0,
-                        y: 0,
-                    },
-                    keys: [],
-                    colour: "#000000",
-                },
+                ready: false,
             };
         }
-        gameData.players[socket.id].state.colour = playerData["colour"];
+
+        // if playerMeta doesnt contain some values, add defaults
+        if (!playerMeta["hoverRadius"]) {
+            playerMeta["hoverRadius"] = 1;
+        }
+
+
+        // add the player to the lobby in the lobbyJsons
+        try {
+            // if the player isnt already in the lobby add them
+            if (!Object.keys(lobbyJsons[playerMeta["lobbyCode"]].players).includes(playerMeta.playerId) && Object.keys(lobbyJsons[playerMeta["lobbyCode"]].players).length < lobbyJsons[playerMeta["lobbyCode"]].maxPlayers) {
+                lobbyJsons[playerMeta["lobbyCode"]].players[playerMeta["playerId"]] = playerMeta;
+                console.log('added player to lobby: ', playerMeta["lobbyCode"]);
+                console.log('playerMeta["playerId"]: ', playerMeta["playerId"]);
+                console.log('playerMeta: ', playerMeta);
+
+                // save some info about the player
+                playerJsons[playerMeta["playerId"]].lobbyCode = playerMeta["lobbyCode"];
+                playerJsons[playerMeta["playerId"]].lastHeartbeat = Date.now();
+                playerJsons[playerMeta["playerId"]].playerId = playerMeta.playerId;
+
+                io.to(playerMeta["lobbyCode"]).emit('lobbyData', { lobbyState: lobbyJsons[playerMeta["lobbyCode"]] });
+                io.to(playerMeta["lobbyCode"]).emit('join', { status: "complete", lobbyState: lobbyJsons[playerMeta["lobbyCode"]] });
+            } else {
+                console.log('player already in lobby or lobby full: ', playerMeta["lobbyCode"]);
+            }
+        } catch (err) {
+            console.log("failed to add player to lobby: ", playerMeta["lobbyCode"], " with error: ", err);
+        }
+    });
+
+    socket.on('toggleReady', (data) => {
+        console.log('toggleReady: ', data);
+        // toggle the player's ready state
+        console.log('lobbyJsons[data["lobbyCode"]].players: ', lobbyJsons[data["lobbyCode"]].players)
+        if (Object.keys(lobbyJsons[data["lobbyCode"]].players).includes(data.playerId)) {
+            postToggleLobbyJson = togglePlayerInLobbyReadyState(lobbyJsons[data["lobbyCode"]], data.playerId)
+            console.log('postToggleLobbyJson: ', postToggleLobbyJson);
+            lobbyJsons[data["lobbyCode"]].players[data.playerId] = postToggleLobbyJson.players[data.playerId];
+            console.log('lobbyJsons[data["lobbyCode"]].players post: ', lobbyJsons[data["lobbyCode"]].players)
+            io.to(data.lobbyCode).emit('lobbyData', { lobbyState: lobbyJsons[data.lobbyCode] });
+
+            // if all the players in that lobby are ready, start the game
+            if (Object.keys(lobbyJsons[data["lobbyCode"]].players).every((playerId) => lobbyJsons[data["lobbyCode"]].players[playerId].ready)) {
+                console.log('all players ready, starting game');
+
+                // create a new game
+                gameJsons[data["lobbyCode"]] = getInitialGameData(lobbyJsons[data["lobbyCode"]]);
+            }
+        }
     });
 });
 
+
 setInterval(() => {
-    // Update the game time
-    gameData.time++;
-
-    // console log the player id list
-    console.log('player id list: ', Object.keys(gameData.players));
-
-    // update all players based on their states
-    Object.keys(gameData.players).forEach((playerId) => {
-        gameData.players[playerId] = updatePlayer(gameData.players[playerId]);
+    // Update the server time
+    serverTime++;
+    // go through all games and iterate them and send a game update to all players in the game
+    Object.keys(gameJsons).forEach((lobbyCode) => {
+        //console.log('gameJsons[lobbyCode]: ', gameJsons[lobbyCode]);
+        gameJsons[lobbyCode] = updateGame(gameJsons[lobbyCode]);
+        io.to(lobbyCode).emit('gameJson', gameJsons[lobbyCode]);
+        //console.log('sent gameJson to lobby: ', lobbyCode);
     });
 
     // all players whose last heartbeat was more than 5 seconds ago are disconnected
-    Object.keys(gameData.players).forEach((playerId) => {
-        if (Date.now() - gameData.players[playerId].lastHeartbeat > 1000) {
-            delete gameData.players[playerId];
-            console.log('deleted player: ', playerId);
+    Object.keys(playerJsons).forEach((playerId) => {
+        if (Date.now() - playerJsons[playerId].lastHeartbeat > 1000) {
+            delete playerJsons[playerId];
+            //console.log('deleted player: ', playerId);
             io.emit('playerDisconnected', playerId);
         }
     });
 
-    // Emit the updated game data to all connected clients
-    io.emit('gameData', gameData);
+    //console.log('gameData: ', gameData);
+    console.log('player count: ', Object.keys(playerJsons).length);
+}, 10);
 
-    console.log('gameData: ', gameData);
-    console.log('just emitted gameData with player count: ', Object.keys(gameData.players).length);
-}, 20);
+setInterval(() => {
+    // all lobbies have all players who are no longer in playersJson removed
+    Object.keys(lobbyJsons).forEach((lobbyCode) => {
+        Object.keys(lobbyJsons[lobbyCode].players).forEach((playerId) => {
+            if (!(playerId in playerJsons)) {
+                delete lobbyJsons[lobbyCode].players[playerId];
+                console.log('deleted player: ', playerId);
+            }
+        });
+    });
 
-app.get('/', (req, res) => {
-    res.send('Hello, World!');
+    // all lobbyJsons that have no players are deleted
+    Object.keys(lobbyJsons).forEach((lobbyCode) => {
+        if (Object.keys(lobbyJsons[lobbyCode].players).length == 0) {
+            delete lobbyJsons[lobbyCode];
+            console.log('deleted lobby: ', lobbyCode);
+
+            // also delete the game if it exists
+            if (lobbyCode in gameJsons) {
+                delete gameJsons[lobbyCode];
+                console.log('deleted game: ', lobbyCode);
+            }
+        }
+    });
+}, 5000);
+
+app.post('/create-lobby', (req, res) => {
+    // create a new lobby
+    // add the lobby to the lobby list
+    // return the lobby code
+    let lobbyCode = generateLobbyName();
+
+    // if somehow the lobby code is already in use, generate a new one
+    while (lobbyCode in lobbyJsons) {
+        lobbyCode = generateLobbyName();
+    }
+
+    try {
+        lobbyJsons[lobbyCode] = {
+            lobbyName: req.body.lobbyName,
+            lobbyCode: lobbyCode,
+            maxPlayers: req.body.maxPlayers,
+            gameMode: req.body.gameMode,
+            players: {},
+            mapSizeX: req.body.mapSizeX,
+            mapSizeY: req.body.mapSizeY,
+            squareSize: 40,
+        };
+        res.json({
+            lobbyCode: lobbyCode,
+            status: 'success',
+        });
+
+        console.log('created lobby: ', lobbyCode);
+    } catch (err) {
+        res.json({
+            status: 'failed',
+            error: err,
+        });
+
+        console.log('failed to create lobby: ', lobbyCode, ' with error: ', err);
+    }
+
+});
+
+app.post('/lobby-exists', (req, res) => {
+    // check if the lobby exists
+    // return the lobby code
+    const lobbyCode = req.body.lobbyCode;
+    if (lobbyCode in lobbyJsons) {
+        res.json({
+            lobbyCode: lobbyCode,
+            status: 'success',
+        });
+    } else {
+        res.json({
+            status: 'failed',
+            lobbyJsons: lobbyJsons,
+        });
+    }
+});
+
+app.post('/join-lobby', (req, res) => {
+    // check if the lobby exists
+    // return the lobby code
+    const lobbyCode = req.body.lobbyCode;
+    if (lobbyCode in lobbyJsons && Object.keys(lobbyJsons[lobbyCode].players).length < lobbyJsons[lobbyCode].maxPlayers) {
+        res.json({
+            lobbyCode: lobbyCode,
+            status: 'success',
+        });
+    } else {
+        res.json({
+            status: 'failed',
+            lobbyJsons: lobbyJsons,
+        });
+    }
 });
 
 app.get('/example', (req, res) => {

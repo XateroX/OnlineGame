@@ -1,0 +1,10 @@
+.base {
+    position: absolute;
+    border-radius: 25%;
+}
+
+.basic {
+    position: absolute;
+    border-radius: 100%;
+
+}

@@ -44,11 +44,12 @@
   color: #888;
 }
 
+.row {
+  display: flex;
+}
 
-.playerBlob {
-  width: 3em;
-  height: 3em;
-  background-color: black;
-  border-radius: 50%;
-  transition: transform 1s ease-in-out;
+.square {
+  width: 20px;
+  height: 20px;
+  border: 1px solid black;
 }

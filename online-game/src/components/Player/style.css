@@ -1,0 +1,3 @@
+.playerCircle {
+    transition: top 0.3s ease-out, left 0.3s ease-out;
+}

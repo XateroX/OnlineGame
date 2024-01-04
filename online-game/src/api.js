@@ -22,4 +22,31 @@ export default class Api {
     getExample = () => {
         return this.client.get('/example');
     };
+
+    createLobby = (lobbyName, maxPlayers, gameMode, mapSizeX, mapSizeY) => {
+        const data = {
+            lobbyName: lobbyName,
+            maxPlayers: maxPlayers,
+            gameMode: gameMode,
+            mapSizeX: mapSizeX,
+            mapSizeY: mapSizeY,
+        };
+        console.log('data');
+        console.log(data);
+        return this.client.post('/create-lobby', data);
+    }
+
+    findLobby = (lobbyCode) => {
+        let data = {
+            lobbyCode: lobbyCode,
+        };
+        return this.client.post(`/lobby-exists`, data);
+    }
+
+    joinLobby = (lobbyCode) => {
+        let data = {
+            lobbyCode: lobbyCode
+        };
+        return this.client.post(`/join-lobby`, data);
+    }
 }
