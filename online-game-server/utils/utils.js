@@ -5,6 +5,7 @@ function getInitialGameData(lobbyJson) {
         squareSize: lobbyJson.squareSize,
         players: {},
         structures: {},
+        units: {}
     };
 
     console.log("configuring game start for lobby ");
@@ -180,23 +181,23 @@ function updateGame(gameJsonCurrent) {
         if (side == 0) {
             rock.x = 0;
             rock.y = Math.floor(Math.random() * gameJsonCurrent.mapSizeY);
-            rock.dx = 0.02 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
-            rock.dy = -0.02 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
+            rock.dx = 0.01 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
+            rock.dy = -0.01 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
         } else if (side == 1) {
             rock.x = gameJsonCurrent.mapSizeX;
             rock.y = Math.floor(Math.random() * gameJsonCurrent.mapSizeY);
-            rock.dx = -0.02 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
-            rock.dy = 0.02 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
+            rock.dx = -0.01 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
+            rock.dy = 0.01 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
         } else if (side == 2) {
             rock.x = Math.floor(Math.random() * gameJsonCurrent.mapSizeX);
             rock.y = 0;
-            rock.dx = 0.02 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
-            rock.dy = 0.02 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
+            rock.dx = 0.01 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
+            rock.dy = 0.01 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
         } else if (side == 3) {
             rock.x = Math.floor(Math.random() * gameJsonCurrent.mapSizeX);
             rock.y = gameJsonCurrent.mapSizeY;
-            rock.dx = -0.02 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
-            rock.dy = -0.02 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
+            rock.dx = -0.01 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
+            rock.dy = -0.01 * (1 + Math.random() * 0.2); // Randomize speed with a factor of 2
         }
 
         // if the game has no rocks yet, initialize the rocks object
@@ -205,14 +206,6 @@ function updateGame(gameJsonCurrent) {
         }
 
         gameJsonCurrent.rocks[rock.id] = rock;
-    }
-
-    // looking at the keys of the players objects, update the player json based on the input
-    for (let playerInd in Object.keys(gameJsonCurrent.players)) {
-        let playerId = Object.keys(gameJsonCurrent.players)[playerInd];
-        let player = gameJsonCurrent.players[playerId];
-
-        gameJsonCurrent.players[playerId] = player;
     }
 
     // update rock positions
@@ -283,6 +276,39 @@ function updateGame(gameJsonCurrent) {
 
         for (let rockId of rocksToDelete) {
             delete gameJsonCurrent.rocks[rockId];
+        }
+    }
+
+    // if any of the structures have factory in the type, add 1 to their charge or 
+    // if the charge is full, spawn a unit
+    for (let structureId of Object.keys(gameJsonCurrent.structures)) {
+        let structure = gameJsonCurrent.structures[structureId];
+        if (structure.type.includes("factory")) {
+            if (!structure.charge) {
+                structure.charge = 0;
+            }
+            structure.charge += 1;
+            if (structure.charge >= structure.maxCharge) {
+                structure.charge = 0;
+                let unitId = Math.random().toString(36).substr(2, 10);
+                let unit = {
+                    x: structure.position.x,
+                    y: structure.position.y,
+                    path: [],
+                    color: "white",
+                    type: structure.unitType,
+                    id: unitId,
+                    health: 100,
+                    originalHealth: 100,
+                    alive: true,
+                    player: structure.player,
+                    position: {
+                        x: structure.position.x,
+                        y: structure.position.y
+                    }
+                };
+                gameJsonCurrent.units[unitId] = unit;
+            }
         }
     }
 

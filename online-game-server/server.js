@@ -133,12 +133,31 @@ io.on('connection', (socket) => {
 
             // if the player pressed the left mouse button then make a new structure at their position
             if (player.mouseButtons.includes(0)) {
-                let newStructure = STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length];
-                newStructure.position = { x: player.x, y: player.y };
-                newStructure.id = inputs.playerId + '_' + (player.buildingIndex % STRUCTURE_LIST.length).toString();
-                newStructure.player = inputs.playerId;
-                newStructure.color = player.color;
-                gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[newStructure.id] = newStructure;
+                // if the player has sufficient resources, create the structure
+                if (player.points >= STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length].cost) {
+                    // if the space the structure will be placed has no structure yet then proceed
+                    let spaceAvailable = true;
+                    Object.keys(gameJsons[playerJsons[inputs.playerId].lobbyCode].structures).forEach((structureId) => {
+                        if (
+                            gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].position.x == player.x &&
+                            gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].position.y == player.y) {
+                            spaceAvailable = false;
+                        }
+                    });
+                    if (spaceAvailable) {
+                        let structureTemplate = STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length];
+                        let newStructure = Object.assign({}, structureTemplate); // create a new instance
+                        newStructure.position = { x: player.x, y: player.y };
+                        newStructure.id = inputs.playerId + '_' + (player.buildingIndex % STRUCTURE_LIST.length) + '_' + Math.random().toString(36).substring(2, 11);
+                        newStructure.player = inputs.playerId;
+                        newStructure.color = player.color;
+                        gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[newStructure.id] = newStructure;
+
+                        // take the points away from the player
+                        player.points -= STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length].cost;
+                        gameJsons[playerJsons[inputs.playerId].lobbyCode].players[inputs.playerId] = player;
+                    }
+                }
             }
 
             // update the player in the gameJsons

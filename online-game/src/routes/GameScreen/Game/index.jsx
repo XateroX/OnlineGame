@@ -3,7 +3,7 @@ import React from 'react';
 import './style.css';
 import PlayerCircle from '../../../components/Player';
 import Square from '../../../components/Square';
-import { hexToRgb, generateBoxShadows } from '../../../utils/utils';
+import { hexToRgb, generateBoxShadows, STRUCTURE_COMPONENTS, UNIT_COMPONENTS } from '../../../utils/utils';
 
 const Game = (props) => {
     const { gameData } = props;
@@ -53,26 +53,13 @@ const Game = (props) => {
 
             {gameData.structures && Object.keys(gameData.structures).map((structId) => {
                 const structJson = gameData.structures[structId];
-                const structPosition = {
-                    top: structJson.position.y * squareSize,
-                    left: structJson.position.x * squareSize,
-                };
                 const color = gameData.players[structJson.player] && gameData.players[structJson.player].color || 'white';
-                let rgb = hexToRgb(color);
+                structJson.color = color;
+                let StructureComponent = STRUCTURE_COMPONENTS[structJson.type];
+                structJson.squareSize = squareSize;
+
                 return (
-                    <div
-                        className={structJson.type}
-                        key={structId}
-                        style={{
-                            backgroundColor: `${color}`,
-                            width: squareSize,
-                            height: squareSize,
-                            border: `1px solid #444444`,
-                            top: structPosition.top,
-                            left: structPosition.left,
-                            boxShadow: generateBoxShadows(rgb, 5)
-                        }}
-                    ></div>
+                    <StructureComponent config={structJson} />
                 );
             })}
             {gameData.players &&
@@ -84,6 +71,19 @@ const Game = (props) => {
                         key={index}
                     />
                 ))}
+            {gameData.units && Object.keys(gameData.units).map((unitId) => {
+                const unitJson = gameData.units[unitId];
+                console.log("UnitJson");
+                console.log(unitJson);
+                const color = gameData.players[unitJson.player] && gameData.players[unitJson.player].color || 'white';
+                unitJson.color = color;
+                unitJson.squareSize = squareSize;
+                let UnitComponent = UNIT_COMPONENTS[unitJson.type];
+
+                return (
+                    <UnitComponent config={unitJson} />
+                );
+            })}
             {gameData.rocks && Object.keys(gameData.rocks).map((rockId) => {
                 const rock = gameData.rocks[rockId];
                 const rockSize = rock.health / 3;

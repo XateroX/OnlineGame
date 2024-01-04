@@ -116,8 +116,8 @@ function GameScreen() {
         // Listen for gameJson events from the server
         socket.on('gameJson', (gameJson) => {
             setGameData(gameJson)
-            //console.log("gameJson");
-            //console.log(gameJson);
+            console.log("gameJson");
+            console.log(gameJson);
         })
 
         const joinLobby = () => {

@@ -1,3 +1,10 @@
+import BasicTurret from '../components/structures/BasicTurret';
+import LazerTurret from '../components/structures/LazerTurret';
+import GrenadeTurret from '../components/structures/GrenadeTurret';
+import Base from '../components/structures/Base';
+import UnitFactory from '../components/structures/UnitFactory';
+import BasicUnit from '../components/units/BasicUnit';
+
 export function getInitialGameData() {
     return {
         mapSizeX: 10,
@@ -12,7 +19,7 @@ export function generateBoxShadows(rgb, times) {
     let boxShadow = '';
     for (let i = 0; i < times; i++) {
         if (i !== 0) boxShadow += ', ';
-        boxShadow += `0 0 ${10 + i * 5}px 0 rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`;
+        boxShadow += `0 0 ${2 + i * 2}px rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
     }
     return boxShadow;
 }
@@ -57,5 +64,37 @@ export const STRUCTURE_LIST = [
         cost: 200,
         health: 100,
         color: '#444444',
+    },
+    {
+        id: 0,
+        name: 'Unit Factory',
+        type: 'unit_factory',
+        cost: 200,
+        health: 300,
+        unitType: 'basic',
+        color: '#444444',
+        maxCharge: 1000,
     }
 ]
+
+export const STRUCTURE_COMPONENTS = {
+    basic: BasicTurret,
+    lazer: LazerTurret,
+    grenade: GrenadeTurret,
+    base: Base,
+    unit_factory: UnitFactory
+}
+
+export const UNIT_LIST = [
+    {
+        id: 0,
+        name: 'Basic Unit',
+        type: 'basic',
+        health: 10,
+        color: '#444444',
+    },
+]
+
+export const UNIT_COMPONENTS = {
+    basic: BasicUnit,
+}

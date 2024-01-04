@@ -22,6 +22,16 @@ const STRUCTURE_LIST = [
         cost: 200,
         health: 100,
         color: '#444444',
+    },
+    {
+        id: 0,
+        name: 'Unit Factory',
+        type: 'unit_factory',
+        cost: 200,
+        health: 300,
+        unitType: 'basic',
+        color: '#444444',
+        maxCharge: 1000,
     }
 ]
 
