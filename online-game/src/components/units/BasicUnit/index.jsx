@@ -13,9 +13,13 @@ const BasicUnit = ({ config }) => {
                 left: position.x * squareSize,
                 backgroundColor: color,
                 border: '1px solid White',
-                transition: 'top 0.5s ease-in-out, left 0.5s ease-in-out'
+                borderRadius: '30%',
+                transition: 'top 0.5s ease-in-out, left 0.5s ease-in-out',
+                overflow: 'visible',
+                fontSize: '0.5em',
+                fontWeight: 'bold',
             }}
-        ></div>
+        >{config.type}</div>
     );
 };
 

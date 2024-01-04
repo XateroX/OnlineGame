@@ -237,7 +237,7 @@ function updateGame(gameJsonCurrent) {
 
                         // if player points are not initialized, initialize them
                         if (!player.points) {
-                            player.points = 0;
+                            player.points = 200;
                         }
                         player.points += rock.originalHealth;
                     }
@@ -291,9 +291,16 @@ function updateGame(gameJsonCurrent) {
             if (structure.charge >= structure.maxCharge) {
                 structure.charge = 0;
                 let unitId = Math.random().toString(36).substr(2, 10);
+
+                // get the position of the controlling player's base and set the initial position there
+                let playerId = structure.player
+                let playerBase = gameJsonCurrent.structures[playerId + "_base"];
+                let initialPosition = playerBase.position;
                 let unit = {
-                    x: structure.position.x,
-                    y: structure.position.y,
+                    position: {
+                        x: initialPosition.x,
+                        y: initialPosition.y,
+                    },
                     path: [],
                     color: "white",
                     type: structure.unitType,
@@ -302,10 +309,6 @@ function updateGame(gameJsonCurrent) {
                     originalHealth: 100,
                     alive: true,
                     player: structure.player,
-                    position: {
-                        x: structure.position.x,
-                        y: structure.position.y
-                    }
                 };
                 gameJsonCurrent.units[unitId] = unit;
             }
