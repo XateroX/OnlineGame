@@ -1,3 +1,5 @@
+const { UNIT_TEMPLATES, STRUCTURE_LIST, find_path } = require('./gameUtils.js');
+
 function getInitialGameData(lobbyJson) {
     let data = {
         mapSizeX: lobbyJson.mapSizeX,
@@ -5,7 +7,8 @@ function getInitialGameData(lobbyJson) {
         squareSize: lobbyJson.squareSize,
         players: {},
         structures: {},
-        units: {}
+        units: {},
+        time: 0,
     };
 
     console.log("configuring game start for lobby ");
@@ -157,9 +160,11 @@ function generateLobbyName() {
     return `${adjective}-${color}-${noun}`;
 }
 
-function updateGame(gameJsonCurrent) {
+function updateGame(gameJsonCurrent, serverTime) {
     //console.log("updating game");
     //console.log(gameJsonCurrent);
+
+    gameJsonCurrent.time = serverTime;
 
     // randomly with a 0.1% chance, spawn a rock at a random edge of the map moving in a random direction
     if (Math.random() < 0.01) {
@@ -237,7 +242,7 @@ function updateGame(gameJsonCurrent) {
 
                         // if player points are not initialized, initialize them
                         if (!player.points) {
-                            player.points = 200;
+                            player.points = 2000;
                         }
                         player.points += rock.originalHealth;
                     }
@@ -295,7 +300,12 @@ function updateGame(gameJsonCurrent) {
                 // get the position of the controlling player's base and set the initial position there
                 let playerId = structure.player
                 let playerBase = gameJsonCurrent.structures[playerId + "_base"];
-                let initialPosition = playerBase.position;
+                //let initialPosition = playerBase.position;
+                // use random initial position instead
+                let initialPosition = {
+                    x: Math.floor(Math.random() * gameJsonCurrent.mapSizeX),
+                    y: Math.floor(Math.random() * gameJsonCurrent.mapSizeY),
+                }
                 let unit = {
                     position: {
                         x: initialPosition.x,
@@ -310,8 +320,48 @@ function updateGame(gameJsonCurrent) {
                     alive: true,
                     player: structure.player,
                 };
+
+                // add to the units object the template for this unit
+                unit = Object.assign(unit, UNIT_TEMPLATES[unit.type]);
+
                 gameJsonCurrent.units[unitId] = unit;
             }
+        }
+    }
+
+    // update unit positions
+    for (let unitId of Object.keys(gameJsonCurrent.units)) {
+        let unit = gameJsonCurrent.units[unitId];
+        //console.log("updating unit " + unitId);
+        //console.log(unit);
+        if (unit.path.length > 0) {
+            //console.log("unit has path" + unitId);
+            let target = unit.path[0];
+
+            // if the unit is not cooling down, move it towards the target
+            if (unit.cooldown == 0) {
+                //console.log("unit " + unitId + " is not cooling down so is moving towards target at " + target.x + ", " + target.y);
+                unit.position.x = target.x;
+                unit.position.y = target.y;
+                unit.path.shift();
+                unit.cooldown = unit.cooldownTime;
+            }else{
+                //console.log("unit " + unitId + " is cooling down so is not moving");
+                unit.cooldown -= 1;
+            }
+        }
+        gameJsonCurrent.units[unitId] = unit;
+    }
+
+    // every 10 game ticks update the path of each unit using A* algorithm
+    if (gameJsonCurrent.time % 10 == 0) {
+        for (let unitId of Object.keys(gameJsonCurrent.units)) {
+            let unit = gameJsonCurrent.units[unitId];
+            let unitPosition = unit.position;
+            let targetPosition = gameJsonCurrent.structures[unit.player + "_base"].position;
+            let path = find_path(unitPosition, targetPosition, gameJsonCurrent);
+            unit.path = path;
+            gameJsonCurrent.units[unitId] = unit;
         }
     }
 

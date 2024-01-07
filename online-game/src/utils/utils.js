@@ -73,7 +73,7 @@ export const STRUCTURE_LIST = [
         health: 300,
         unitType: 'basic',
         color: '#444444',
-        maxCharge: 1000,
+        maxCharge: 100,
     }
 ]
 

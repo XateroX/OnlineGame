@@ -73,8 +73,8 @@ const Game = (props) => {
                 ))}
             {gameData.units && Object.keys(gameData.units).map((unitId) => {
                 const unitJson = gameData.units[unitId];
-                console.log("UnitJson");
-                console.log(unitJson);
+                //console.log("UnitJson");
+                //console.log(unitJson);
                 const color = gameData.players[unitJson.player] && gameData.players[unitJson.player].color || 'white';
                 unitJson.color = color;
                 unitJson.squareSize = squareSize;

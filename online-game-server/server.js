@@ -241,7 +241,7 @@ setInterval(() => {
     // go through all games and iterate them and send a game update to all players in the game
     Object.keys(gameJsons).forEach((lobbyCode) => {
         //console.log('gameJsons[lobbyCode]: ', gameJsons[lobbyCode]);
-        gameJsons[lobbyCode] = updateGame(gameJsons[lobbyCode]);
+        gameJsons[lobbyCode] = updateGame(gameJsons[lobbyCode], serverTime);
         io.to(lobbyCode).emit('gameJson', gameJsons[lobbyCode]);
         //console.log('sent gameJson to lobby: ', lobbyCode);
     });
