@@ -8,6 +8,7 @@ function getInitialGameData(lobbyJson) {
         players: {},
         structures: {},
         units: {},
+        reserve: {},
         projectiles: {},
         time: 0,
     };
@@ -171,7 +172,7 @@ function updateGame(gameJsonCurrent, serverTime) {
     gameJsonCurrent.time = serverTime;
 
     // randomly with a 0.1% chance, spawn a rock at a random edge of the map moving in a random direction
-    if (Math.random() < 0.01) {
+    if (Math.random() < 0.004) {
         let health = Math.random() * 100;
         let rock = {
             x: 0,
@@ -405,7 +406,7 @@ function updateGame(gameJsonCurrent, serverTime) {
                 // add to the units object the template for this unit
                 unit = Object.assign(unit, UNIT_TEMPLATES[unit.type]);
 
-                gameJsonCurrent.units[unitId] = unit;
+                gameJsonCurrent.reserve[unitId] = unit;
             }
         }
 
@@ -550,6 +551,30 @@ function updateGame(gameJsonCurrent, serverTime) {
             let path = find_path(unitPosition, targetPosition, gameJsonCurrent);
             unit.path = path;
             gameJsonCurrent.units[unitId] = unit;
+        }
+    }
+
+    // every 10 game ticks if a player is holding down the 's' key then spawn a unit at their base
+    // from the reserve
+    if (gameJsonCurrent.time % 10 == 0) {
+        for (let playerId of Object.keys(gameJsonCurrent.players)) {
+            let player = gameJsonCurrent.players[playerId];
+            if (player.keys.includes("s")) {
+                //console.log("player " + playerId + " is holding down the 's' key");
+                let playerBase = gameJsonCurrent.structures[playerId + "_base"];
+                if (playerBase) {
+                    let unitId = Object.keys(gameJsonCurrent.reserve)[0];
+                    if (unitId) {
+                        let unit = gameJsonCurrent.reserve[unitId];
+                        unit.position.x = playerBase.position.x;
+                        unit.position.y = playerBase.position.y;
+                        unit.path = [];
+                        unit.alive = true;
+                        gameJsonCurrent.units[unitId] = unit;
+                        delete gameJsonCurrent.reserve[unitId];
+                    }
+                }
+            }
         }
     }
 

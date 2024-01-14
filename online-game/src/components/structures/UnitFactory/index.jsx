@@ -2,8 +2,9 @@ import React from 'react';
 import { generateBoxShadows } from '../../../utils/utils';
 
 const UnitFactory = ({ config }) => {
-    const { color, squareSize, health, maxHealth } = config;
+    const { color, squareSize, health, maxHealth, charge, maxCharge } = config;
     const healthPercentage = (health / maxHealth) * 100;
+    const chargePercentage = (charge / maxCharge) * 100;
 
     return (
         <div className="unit_factory" style={{
@@ -19,6 +20,14 @@ const UnitFactory = ({ config }) => {
             justifyContent: 'center',
             alignItems: 'center',
         }}>
+            <div style={{
+                width: '100%',
+                height: `${chargePercentage}%`,
+                backgroundColor: 'blue',
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+            }}></div>
             {health < maxHealth && (
                 <div style={{
                     width: '100%',
@@ -35,9 +44,16 @@ const UnitFactory = ({ config }) => {
                     }}></div>
                 </div>
             )}
-            <div style={{ color: 'white', fontSize: '20px', textShadow: generateBoxShadows({ 'r': 0, 'g': 0, 'b': 0 }, 10), }}>
+            <div style={{ 
+                color: 'white', 
+                fontSize: '20px', 
+                textShadow: generateBoxShadows({ 'r': 0, 'g': 0, 'b': 0 }, 10),
+                position: 'relative',
+                zIndex: 9999,
+            }}>
                 U
             </div>
+            
         </div>
     );
 };

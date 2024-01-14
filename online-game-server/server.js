@@ -1,6 +1,6 @@
 const { updateGame, getInitialGameData, generateLobbyName } = require('./utils/utils.js');
 const { togglePlayerInLobbyReadyState } = require('./utils/lobbyUtils.js');
-const { STRUCTURE_LIST } = require('./utils/gameUtils.js');
+const { STRUCTURE_LIST, find_path } = require('./utils/gameUtils.js');
 
 const express = require('express');
 const socketIO = require('socket.io');
@@ -135,18 +135,19 @@ io.on('connection', (socket) => {
 
             // if the player pressed the left mouse button then make a new structure at their position
             if (player.mouseButtons.includes(0)) {
-                // if the player has sufficient resources, create the structure
-                if (player.points >= STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length].cost) {
-                    // if the space the structure will be placed has no structure yet then proceed
-                    let spaceAvailable = true;
-                    Object.keys(gameJsons[playerJsons[inputs.playerId].lobbyCode].structures).forEach((structureId) => {
-                        if (
-                            gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].position.x == player.x &&
-                            gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].position.y == player.y) {
-                            spaceAvailable = false;
-                        }
-                    });
-                    if (spaceAvailable) {
+                // if the space the structure will be placed has no structure yet then proceed
+                let spaceAvailable = true;
+                Object.keys(gameJsons[playerJsons[inputs.playerId].lobbyCode].structures).forEach((structureId) => {
+                    if (
+                        gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].position.x == player.x &&
+                        gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].position.y == player.y) {
+                        spaceAvailable = false;
+                    }
+                });
+                if (spaceAvailable) {
+                    // if the player has sufficient resources, create the structure (if it doesn't break pathing)
+                    if (player.points >= STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length].cost) {
+                        // let them have the structure then remove if it causes issues
                         let structureTemplate = STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length];
                         let newStructure = Object.assign({}, structureTemplate); // create a new instance
                         newStructure.position = { x: player.x, y: player.y };
@@ -158,6 +159,33 @@ io.on('connection', (socket) => {
                         // take the points away from the player
                         player.points -= STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length].cost;
                         gameJsons[playerJsons[inputs.playerId].lobbyCode].players[inputs.playerId] = player;
+
+                        // lets check to see if this placement will cause there to be no valid routes between the player's bases
+                        // if it does, then dont place the structure
+                        // first get the location of all structures of type base
+                        let basePositions = [];
+                        Object.keys(gameJsons[playerJsons[inputs.playerId].lobbyCode].structures).forEach((structureId) => {
+                            if (gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].type == 'base') {
+                                basePositions.push(gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].position);
+                            }
+                        });
+
+                        // now if any combination of two bases are not connected, then dont place the structure
+                        let validPlacement = true;
+                        for (let i = 0; i < basePositions.length; i++) {
+                            for (let j = i + 1; j < basePositions.length; j++) {
+                                //console.log('checking if bases are connected');
+                                let path = find_path(basePositions[i], basePositions[j], gameJsons[playerJsons[inputs.playerId].lobbyCode]);
+                                if (path.length == 0) {
+                                    validPlacement = false;
+                                    delete gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[newStructure.id];
+                                    // give the points back to the player
+                                    player.points += STRUCTURE_LIST[player.buildingIndex % STRUCTURE_LIST.length].cost;
+                                    gameJsons[playerJsons[inputs.playerId].lobbyCode].players[inputs.playerId] = player;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }

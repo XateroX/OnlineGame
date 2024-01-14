@@ -5,7 +5,6 @@ import { STRUCTURE_LIST } from '../../utils/utils';
 const PlayerCircle = ({ player, squareSize, playerSize }) => {
     const gridColumns = Math.ceil(5);
     const gridRows = Math.ceil(2);
-
     return (
         <div
             className="playerCircle"
@@ -43,9 +42,13 @@ const PlayerCircle = ({ player, squareSize, playerSize }) => {
                                 <div
                                     key={`${row}-${col}`}
                                     style={{
-                                        backgroundColor: (row * gridColumns + col == (player.buildingIndex % STRUCTURE_LIST.length)) ? player.color : 'white',
+                                        backgroundColor: (row * gridColumns + col === (player.buildingIndex % STRUCTURE_LIST.length)) ? player.color : 'white',
                                         width: '100%',
                                         height: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'flex-end',
                                     }}
                                 >
                                     <p style={{
@@ -57,6 +60,16 @@ const PlayerCircle = ({ player, squareSize, playerSize }) => {
                                         fontSize: '0.75em',
                                     }}>{
                                             struct && struct.name || 'NONE'
+                                        }</p>
+                                    <p style={{
+                                        width: '4em',
+                                        height: '2em',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'wrap',
+                                        fontSize: '0.5em',
+                                    }}>{
+                                            struct && `cost: ${struct.cost}` || 'cost: 0'
                                         }</p>
                                 </div>)
                         })

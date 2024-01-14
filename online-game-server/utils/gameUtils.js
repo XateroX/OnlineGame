@@ -49,8 +49,8 @@ const STRUCTURE_LIST = [
 
 const UNIT_TEMPLATES = {
     basic: {
-        health: 10,
-        maxHealth: 10,
+        health: 75,
+        maxHealth: 75,
         damage: 1,
         cooldownTime: 40,
         cooldown: 0,
