@@ -128,8 +128,8 @@ const Game = (props) => {
                 const rock = gameData.rocks[rockId];
                 const rockSize = rock.health / 3;
                 const rockPosition = {
-                    top: rock.y * squareSize + (squareSize - rockSize) / 2,
-                    left: rock.x * squareSize + (squareSize - rockSize) / 2,
+                    top: rock.y * squareSize + (squareSize - rockSize) / 2 - squareSize/2,
+                    left: rock.x * squareSize + (squareSize - rockSize) / 2 - squareSize/2,
                 };
                 return (
                     <div

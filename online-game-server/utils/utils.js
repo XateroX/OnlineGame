@@ -44,16 +44,17 @@ function getInitialGameData(lobbyJson) {
             buildingIndex: 0,
         };
 
-        const structureX = Math.floor(Math.random() * (lobbyJson.mapSizeX - quarterMapWidth * 2)) + quarterMapWidth;
-        const structureY = Math.floor(Math.random() * lobbyJson.mapSizeY);
-        const structureId = playerId + "_base";
-        data.structures[structureId] = {
-            player: playerId,
-            position: { x: structureX, y: structureY },
-            health: 100,
-            type: "base",
-            alive: true,
-        };
+        // No auto home generation
+        // const structureX = Math.floor(Math.random() * (lobbyJson.mapSizeX - quarterMapWidth * 2)) + quarterMapWidth;
+        // const structureY = Math.floor(Math.random() * lobbyJson.mapSizeY);
+        // const structureId = playerId + "_base";
+        // data.structures[structureId] = {
+        //     player: playerId,
+        //     position: { x: structureX, y: structureY },
+        //     health: 100,
+        //     type: "base",
+        //     alive: true,
+        // };
     }
 
     return data;

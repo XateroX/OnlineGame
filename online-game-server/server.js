@@ -135,6 +135,27 @@ io.on('connection', (socket) => {
 
             // if the player pressed the left mouse button then make a new structure at their position
             if (player.mouseButtons.includes(0)) {
+                // if this is the first structure by this player, make it a base
+                // dict containing each players base status
+                let playerBaseStatus = {};
+                Object.keys(gameJsons[playerJsons[inputs.playerId].lobbyCode].structures).forEach((structureId) => {
+                    if (gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].type == 'base') {
+                        playerBaseStatus[gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId].player] = true;
+                    }
+                });
+
+                // if this player has no base, add a base to the game
+                if (!(inputs.playerId in playerBaseStatus)) {
+                    const structureId = inputs.playerId + "_base";
+                    gameJsons[playerJsons[inputs.playerId].lobbyCode].structures[structureId] = {
+                        player: inputs.playerId,
+                        position: { x: player.x, y: player.y },
+                        health: 100,
+                        type: "base",
+                        alive: true,
+                    };
+                }
+
                 // if the space the structure will be placed has no structure yet then proceed
                 let spaceAvailable = true;
                 Object.keys(gameJsons[playerJsons[inputs.playerId].lobbyCode].structures).forEach((structureId) => {
