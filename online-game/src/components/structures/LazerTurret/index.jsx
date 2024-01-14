@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 const LazerTurret = ({ config }) => {
-    const { color, squareSize } = config;
+    const { color, squareSize, health, maxHealth } = config;
 
     const [angleOffset, setAngleOffset] = useState(Math.random() * Math.PI * 2);
 
@@ -17,6 +17,9 @@ const LazerTurret = ({ config }) => {
     const lineOffsetX = Math.cos(angleOffset) * squareSize * 0.3;
     const lineOffsetY = Math.sin(angleOffset) * squareSize * 0.3;
 
+    const healthBarWidth = (health / maxHealth) * squareSize;
+    const healthPercentage = (health / maxHealth) * 100;
+
     return (
         <div className="lazer-turret" style={{
             position: 'absolute',
@@ -28,6 +31,22 @@ const LazerTurret = ({ config }) => {
             borderRadius: '50%',
             border: '1px solid White',
         }}>
+            {health < maxHealth && (
+                <div style={{
+                    width: '100%',
+                    height: '5px',
+                    backgroundColor: 'red',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                }}>
+                    <div style={{
+                        width: `${healthPercentage}%`,
+                        height: '100%',
+                        backgroundColor: 'green',
+                    }}></div>
+                </div>
+            )}
             <div className="line" style={{
                 position: 'absolute',
                 backgroundColor: 'black',

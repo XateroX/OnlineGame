@@ -5,7 +5,10 @@ const STRUCTURE_LIST = [
         type: 'basic',
         cost: 10,
         health: 10,
+        maxHealth: 10,
         color: '#444444',
+        alive: true,
+        range: 5,
     },
     {
         id: 0,
@@ -13,7 +16,10 @@ const STRUCTURE_LIST = [
         type: 'lazer',
         cost: 100,
         health: 50,
+        maxHealth: 50,
         color: '#444444',
+        alive: true,
+        range: 5,
     },
     {
         id: 0,
@@ -21,7 +27,10 @@ const STRUCTURE_LIST = [
         type: 'grenade',
         cost: 200,
         health: 100,
+        maxHealth: 100,
         color: '#444444',
+        alive: true,
+        range: 5,
     },
     {
         id: 0,
@@ -29,19 +38,24 @@ const STRUCTURE_LIST = [
         type: 'unit_factory',
         cost: 200,
         health: 300,
+        maxHealth: 300,
         unitType: 'basic',
         color: '#444444',
         maxCharge: 1000,
+        alive: true,
+        range: 5,
     }
 ];
 
 const UNIT_TEMPLATES = {
     basic: {
         health: 10,
+        maxHealth: 10,
         damage: 1,
         cooldownTime: 40,
         cooldown: 0,
         color: '#444444',
+        alive: true,
     },
 };
 
@@ -71,9 +85,12 @@ function find_path(unitPosition, targetPosition, gameJsonCurrent) {
         let x = structure.position.x;
         let y = structure.position.y;
         if (!grid[x]) grid[x] = [];
-        if (x !== targetPosition.x || y !== targetPosition.y) {
+
+        // also want to make sure a unit can pass though its own base
+        if (!(structure.playerId == unitPosition.playerId && structure.type == "base") && (x !== targetPosition.x || y !== targetPosition.y)) {
             grid[x][y] = false;
         }
+        structure.alive = true;
     }
 
     // using the grid implement a simple floodfill algorithm

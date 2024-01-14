@@ -3,7 +3,7 @@ import React from 'react';
 import './style.css';
 import PlayerCircle from '../../../components/Player';
 import Square from '../../../components/Square';
-import { hexToRgb, generateBoxShadows, STRUCTURE_COMPONENTS, UNIT_COMPONENTS } from '../../../utils/utils';
+import { hexToRgb, generateBoxShadows, STRUCTURE_COMPONENTS, UNIT_COMPONENTS, PROJECTILE_COMPONENTS } from '../../../utils/utils';
 
 const Game = (props) => {
     const { gameData } = props;
@@ -49,28 +49,8 @@ const Game = (props) => {
                             );
                         })}
                     </div>
-                ))}
-
-            {gameData.structures && Object.keys(gameData.structures).map((structId) => {
-                const structJson = gameData.structures[structId];
-                const color = gameData.players[structJson.player] && gameData.players[structJson.player].color || 'white';
-                structJson.color = color;
-                let StructureComponent = STRUCTURE_COMPONENTS[structJson.type];
-                structJson.squareSize = squareSize;
-
-                return (
-                    <StructureComponent config={structJson} />
-                );
-            })}
-            {gameData.players &&
-                Object.values(gameData.players).map((player, index) => (
-                    <PlayerCircle
-                        player={player}
-                        squareSize={squareSize}
-                        playerSize={playerSize}
-                        key={index}
-                    />
-                ))}
+                )
+            )}
             {gameData.units && Object.keys(gameData.units).map((unitId) => {
                 const unitJson = gameData.units[unitId];
                 //console.log("UnitJson");
@@ -84,6 +64,66 @@ const Game = (props) => {
                     <UnitComponent config={unitJson} />
                 );
             })}
+            
+            {gameData.structures && Object.keys(gameData.structures).map((structId) => {
+                const structJson = gameData.structures[structId];
+                const color = gameData.players[structJson.player] && gameData.players[structJson.player].color || 'white';
+                structJson.color = color;
+                let StructureComponent = STRUCTURE_COMPONENTS[structJson.type];
+                structJson.squareSize = squareSize;
+
+                return (
+                    <StructureComponent config={structJson} />
+                );
+            })}
+            {gameData.projectiles && Object.keys(gameData.projectiles).map((projectileId) => {
+                const projectileJson = gameData.projectiles[projectileId];
+                const color = gameData.players[projectileJson.player] && gameData.players[projectileJson.player].color || 'white';
+                projectileJson.color = color;
+                projectileJson.squareSize = squareSize;
+                const projectilePosition = {
+                    top: projectileJson.position.y * squareSize + (squareSize - squareSize/4) / 2,
+                    left: projectileJson.position.x * squareSize + (squareSize - squareSize/4) / 2,
+                };
+                console.log("projpos");
+                console.log(projectilePosition);
+                //let ProjectileComponent = PROJECTILE_COMPONENTS[projectileJson.type];
+
+                // return (
+                //     <ProjectileComponent config={projectileJson} />
+                // );
+                // const rock = gameData.rocks[rockId];
+                // const rockSize = rock.health / 3;
+                // const rockPosition = {
+                //     top: rock.y * squareSize + (squareSize - rockSize) / 2,
+                //     left: rock.x * squareSize + (squareSize - rockSize) / 2,
+                // };
+                return (
+                    <div
+                        className="projectile"
+                        key={projectileId}
+                        style={{
+                            position: 'absolute',
+                            width: squareSize/4,
+                            height: squareSize/4,
+                            backgroundColor: `${color}`,
+                            border: `1px solid #444444`,
+                            borderRadius: '100%',
+                            ...projectilePosition,
+                        }}
+                    ></div>
+                );
+            })}
+            {gameData.players &&
+                Object.values(gameData.players).map((player, index) => (
+                    <PlayerCircle
+                        player={player}
+                        squareSize={squareSize}
+                        playerSize={playerSize}
+                        key={index}
+                    />
+                ))}
+            
             {gameData.rocks && Object.keys(gameData.rocks).map((rockId) => {
                 const rock = gameData.rocks[rockId];
                 const rockSize = rock.health / 3;

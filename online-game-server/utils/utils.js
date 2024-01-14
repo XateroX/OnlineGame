@@ -8,6 +8,7 @@ function getInitialGameData(lobbyJson) {
         players: {},
         structures: {},
         units: {},
+        projectiles: {},
         time: 0,
     };
 
@@ -50,6 +51,7 @@ function getInitialGameData(lobbyJson) {
             position: { x: structureX, y: structureY },
             health: 100,
             type: "base",
+            alive: true,
         };
     }
 
@@ -164,6 +166,8 @@ function updateGame(gameJsonCurrent, serverTime) {
     //console.log("updating game");
     //console.log(gameJsonCurrent);
 
+    squareSize = gameJsonCurrent.squareSize;
+
     gameJsonCurrent.time = serverTime;
 
     // randomly with a 0.1% chance, spawn a rock at a random edge of the map moving in a random direction
@@ -213,6 +217,88 @@ function updateGame(gameJsonCurrent, serverTime) {
         gameJsonCurrent.rocks[rock.id] = rock;
     }
 
+    // update the projectile positions
+    if (gameJsonCurrent.projectiles) {     
+        //console.log("updating projectiles (all)");
+        for (let projectileId in Object.keys(gameJsonCurrent.projectiles)) {
+            projectileId = Object.keys(gameJsonCurrent.projectiles)[projectileId];
+            let projectile = gameJsonCurrent.projectiles[projectileId];
+            projectile.position.x += projectile.dx;
+            projectile.position.y += projectile.dy;
+            //console.log("updating projectile " + projectileId);
+            //console.log(projectile);
+        }
+
+        // if any projectiles are on top of a unit or structure, kill the projectile and reduce the health of the unit or structure by 1
+        for (let projectileId of Object.keys(gameJsonCurrent.projectiles)) {
+            let projectile = gameJsonCurrent.projectiles[projectileId];
+            for (let unitId of Object.keys(gameJsonCurrent.units)) {
+                let unit = gameJsonCurrent.units[unitId];
+                if (projectile.player !== unit.player) {
+                    let distance = Math.sqrt(Math.pow(unit.position.x - projectile.position.x, 2) + Math.pow(unit.position.y - projectile.position.y, 2));
+                    if (distance <= 1) {
+                        //console.log("projectile " + projectileId + " has hit unit " + unitId);
+                        projectile.alive = false;
+                        unit.health -= 1;
+                        if (unit.health <= 0) {
+                            unit.alive = false;
+                        }
+                        gameJsonCurrent.units[unitId] = unit;
+                        break; // exit the loop since the projectile can only hit one unit at a time
+                    }
+                }
+            }
+            
+            for (let structureId of Object.keys(gameJsonCurrent.structures)) {
+                let structure = gameJsonCurrent.structures[structureId];
+                if (projectile.player !== structure.player && !structure.type.includes("base")) {
+                    let distance = Math.sqrt(Math.pow(structure.position.x - projectile.position.x, 2) + Math.pow(structure.position.y - projectile.position.y, 2));
+                    if (distance <= 1) {
+                        //console.log("projectile " + projectileId + " has hit structure " + structureId);
+                        projectile.alive = false;
+                        structure.health -= 1;
+                        if (structure.health <= 0) {
+                            structure.alive = false;
+                        }
+                        gameJsonCurrent.structures[structureId] = structure;
+                        break; // exit the loop since the projectile can only hit one structure at a time
+                    }
+                }
+            }
+        }
+        
+
+        // any of the projectiles that are off the map, set alive=false
+        for (let projectileId of Object.keys(gameJsonCurrent.projectiles)) {
+            try {
+                let projectile = gameJsonCurrent.projectiles[projectileId];
+                if (
+                    projectile.position.x < 0 ||
+                    projectile.position.x > gameJsonCurrent.mapSizeX ||
+                    projectile.position.y < 0 ||
+                    projectile.position.y > gameJsonCurrent.mapSizeY
+                ) {
+                    projectile.alive = false;
+                }
+            } catch (error) {
+                console.log(error);
+            }
+        }
+
+        // remove all projectiles with alive=false
+        let projectilesToDelete = [];
+
+        for (let projectileId of Object.keys(gameJsonCurrent.projectiles)) {
+            let projectile = gameJsonCurrent.projectiles[projectileId];
+            if (!projectile || !projectile.alive) {
+                projectilesToDelete.push(projectileId);
+            }
+        }
+
+        for (let projectileId of projectilesToDelete) {
+            delete gameJsonCurrent.projectiles[projectileId];
+        }
+    }
     // update rock positions
     if (gameJsonCurrent.rocks) {
         //console.log("updating rocks");
@@ -242,7 +328,7 @@ function updateGame(gameJsonCurrent, serverTime) {
 
                         // if player points are not initialized, initialize them
                         if (!player.points) {
-                            player.points = 2000;
+                            player.points = 0;
                         }
                         player.points += rock.originalHealth;
                     }
@@ -300,12 +386,7 @@ function updateGame(gameJsonCurrent, serverTime) {
                 // get the position of the controlling player's base and set the initial position there
                 let playerId = structure.player
                 let playerBase = gameJsonCurrent.structures[playerId + "_base"];
-                //let initialPosition = playerBase.position;
-                // use random initial position instead
-                let initialPosition = {
-                    x: Math.floor(Math.random() * gameJsonCurrent.mapSizeX),
-                    y: Math.floor(Math.random() * gameJsonCurrent.mapSizeY),
-                }
+                let initialPosition = playerBase.position;
                 let unit = {
                     position: {
                         x: initialPosition.x,
@@ -327,6 +408,98 @@ function updateGame(gameJsonCurrent, serverTime) {
                 gameJsonCurrent.units[unitId] = unit;
             }
         }
+
+        // if the structure.type is in the list of structures which can shoot projectiles,
+        // check if the structure is cooling down and if not, shoot a projectile if there is a target
+        if (["basic", "lazer", "grenade"].includes(structure.type)) {
+            if (!structure.cooldown) {
+                structure.cooldown = 0;
+            }
+            if (structure.cooldown <= 0) {
+                let closestUnit = null;
+                let closestStructure = null;
+                let closestDistance = 1000000;
+                for (let unitId of Object.keys(gameJsonCurrent.units)) {
+                    let unit = gameJsonCurrent.units[unitId];
+                    if (unit.player !== structure.player) {
+                        let distance = Math.sqrt(Math.pow(unit.position.x - structure.position.x, 2) + Math.pow(unit.position.y - structure.position.y, 2));
+                        if (distance <= structure.range && distance < closestDistance) {
+                            closestDistance = distance;
+                            closestUnit = unit;
+                        }
+                    }
+                }
+
+                if (!closestUnit) {
+                    for (let structureId of Object.keys(gameJsonCurrent.structures)) {
+                        let enemyStructure = gameJsonCurrent.structures[structureId];
+                        if (enemyStructure.player !== structure.player && !enemyStructure.type.includes("base")) {
+                            let distance = Math.sqrt(Math.pow(enemyStructure.position.x - structure.position.x, 2) + Math.pow(enemyStructure.position.y - structure.position.y, 2));
+                            if (distance <= structure.range && distance < closestDistance) {
+                                closestDistance = distance;
+                                closestStructure = enemyStructure;
+                            }
+                        }
+                    }
+                }
+
+                if (closestUnit) {
+                    let projectileId = Math.random().toString(36);
+                    let projectile = {
+                        position: {
+                            x: structure.position.x,
+                            y: structure.position.y,
+                        },
+                        dx: 0,
+                        dy: 0,
+                        color: "red",
+                        type: structure.type,
+                        id: projectileId,
+                        health: 1,
+                        originalHealth: 1,
+                        alive: true,
+                        player: structure.player,
+                    };
+
+                    // calculate the dx and dy of the projectile
+                    let distance = Math.sqrt(Math.pow(closestUnit.position.x - structure.position.x, 2) + Math.pow(closestUnit.position.y - structure.position.y, 2));
+                    //console.log("distance is " + distance);
+                    projectile.dx = (closestUnit.position.x - structure.position.x) / distance * 0.2;
+                    projectile.dy = (closestUnit.position.y - structure.position.y) / distance * 0.2;
+
+                    gameJsonCurrent.projectiles[projectileId] = projectile;
+                    structure.cooldown = 15;
+                } else if (closestStructure) {
+                    let projectileId = Math.random().toString(36);
+                    let projectile = {
+                        position: {
+                            x: structure.position.x,
+                            y: structure.position.y,
+                        },
+                        dx: 0,
+                        dy: 0,
+                        color: "red",
+                        type: structure.type,
+                        id: projectileId,
+                        health: 1,
+                        originalHealth: 1,
+                        alive: true,
+                        player: structure.player,
+                    };
+
+                    // calculate the dx and dy of the projectile
+                    let distance = Math.sqrt(Math.pow(closestStructure.position.x - structure.position.x, 2) + Math.pow(closestStructure.position.y - structure.position.y, 2));
+                    //console.log("distance is " + distance);
+                    projectile.dx = (closestStructure.position.x - structure.position.x) / distance * 0.2;
+                    projectile.dy = (closestStructure.position.y - structure.position.y) / distance * 0.2;
+
+                    gameJsonCurrent.projectiles[projectileId] = projectile;
+                    structure.cooldown = 15;
+                }
+            } else {
+                structure.cooldown -= 1;
+            }
+        }
     }
 
     // update unit positions
@@ -345,7 +518,20 @@ function updateGame(gameJsonCurrent, serverTime) {
                 unit.position.y = target.y;
                 unit.path.shift();
                 unit.cooldown = unit.cooldownTime;
-            }else{
+
+                // check if the unit is on the same square as an enemy base
+                let enemyBaseIds = Object.keys(gameJsonCurrent.structures).filter(structureId => structureId.includes("base") && structureId !== unit.player + "_base");
+                for (let enemyBaseId of enemyBaseIds) {
+                    let enemyBase = gameJsonCurrent.structures[enemyBaseId];
+                    if (enemyBase.position.x === unit.position.x && enemyBase.position.y === unit.position.y) {
+                        // unit is on top of an enemy base, kill the unit and reduce the base's health
+                        unit.alive = false;
+                        enemyBase.health -= unit.damage;
+                        gameJsonCurrent.structures[enemyBaseId] = enemyBase;
+                        break; // exit the loop since the unit can only be on one base at a time
+                    }
+                }
+            } else {
                 //console.log("unit " + unitId + " is cooling down so is not moving");
                 unit.cooldown -= 1;
             }
@@ -358,12 +544,41 @@ function updateGame(gameJsonCurrent, serverTime) {
         for (let unitId of Object.keys(gameJsonCurrent.units)) {
             let unit = gameJsonCurrent.units[unitId];
             let unitPosition = unit.position;
-            let targetPosition = gameJsonCurrent.structures[unit.player + "_base"].position;
+            let enemyIds = Object.keys(gameJsonCurrent.structures).filter(structureId => structureId.includes("base") && structureId !== unit.player + "_base");
+            let randomEnemyId = enemyIds[Math.floor(Math.random() * enemyIds.length)];
+            let targetPosition = gameJsonCurrent.structures[randomEnemyId].position;
             let path = find_path(unitPosition, targetPosition, gameJsonCurrent);
             unit.path = path;
             gameJsonCurrent.units[unitId] = unit;
         }
     }
+
+    // cull all dead units
+    let unitsToDelete = [];
+    for (let unitId of Object.keys(gameJsonCurrent.units)) {
+        let unit = gameJsonCurrent.units[unitId];
+        if (!unit || !unit.alive) {
+            unitsToDelete.push(unitId);
+        }
+    }
+
+    for (let unitId of unitsToDelete) {
+        delete gameJsonCurrent.units[unitId];
+    }
+
+    // cull all dead structures
+    let structuresToDelete = [];
+    for (let structureId of Object.keys(gameJsonCurrent.structures)) {
+        let structure = gameJsonCurrent.structures[structureId];
+        if (!structure || !structure.alive) {
+            structuresToDelete.push(structureId);
+        }
+    }
+
+    for (let structureId of structuresToDelete) {
+        delete gameJsonCurrent.structures[structureId];
+    }
+
 
     return gameJsonCurrent;
 }

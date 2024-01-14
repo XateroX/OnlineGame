@@ -92,6 +92,8 @@ io.on('connection', (socket) => {
                 lastHeartbeat: Date.now(),
                 ready: false,
             };
+            console.log('added player: ', playerId);
+            console.log("players in playerJsons: ", Object.keys(playerJsons).length);
         }
 
         // Update the last heartbeat time for the player
@@ -256,7 +258,7 @@ setInterval(() => {
     });
 
     //console.log('gameData: ', gameData);
-    console.log('player count: ', Object.keys(playerJsons).length);
+    //console.log('player count: ', Object.keys(playerJsons).length);
 }, 10);
 
 setInterval(() => {

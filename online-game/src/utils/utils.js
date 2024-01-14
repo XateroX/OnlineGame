@@ -4,6 +4,7 @@ import GrenadeTurret from '../components/structures/GrenadeTurret';
 import Base from '../components/structures/Base';
 import UnitFactory from '../components/structures/UnitFactory';
 import BasicUnit from '../components/units/BasicUnit';
+import BasicProjectile from '../components/projectiles/BasicProjectile';
 
 export function getInitialGameData() {
     return {
@@ -91,10 +92,15 @@ export const UNIT_LIST = [
         name: 'Basic Unit',
         type: 'basic',
         health: 10,
+        damage: 1,
         color: '#444444',
     },
 ]
 
 export const UNIT_COMPONENTS = {
     basic: BasicUnit,
+}
+
+export const PROJECTILE_COMPONENTS = {
+    basic: BasicProjectile,    
 }

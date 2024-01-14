@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 const GrenadeTurret = ({ config }) => {
-    const { color, squareSize } = config;
+    const { color, squareSize, health, maxHealth } = config;
 
     const [angleOffset, setAngleOffset] = useState(Math.random() * Math.PI * 2);
 
@@ -17,10 +17,13 @@ const GrenadeTurret = ({ config }) => {
     const circleOffset = circleRadius * 1.5;
 
     const balls = [
-        { offsetX: Math.cos(angleOffset + 0) * circleOffset, offsetY: Math.sin(angleOffset + 0) * circleOffset }, ,
+        { offsetX: Math.cos(angleOffset + 0) * circleOffset, offsetY: Math.sin(angleOffset + 0) * circleOffset },
         { offsetX: Math.cos(angleOffset + (Math.PI * 2) / 3) * circleOffset, offsetY: Math.sin(angleOffset + (Math.PI * 2) / 3) * circleOffset },
         { offsetX: Math.cos(angleOffset + ((Math.PI * 2) / 3) * 2) * circleOffset, offsetY: Math.sin(angleOffset + ((Math.PI * 2) / 3) * 2) * circleOffset }
     ];
+
+    const healthBarWidth = (health / maxHealth) * squareSize;
+    const healthPercentage = (health / maxHealth) * 100;
 
     return (
         <div className="grenade-turret" style={{
@@ -33,6 +36,22 @@ const GrenadeTurret = ({ config }) => {
             borderRadius: '50%',
             border: '1px solid White',
         }}>
+            {health < maxHealth && (
+                <div style={{
+                    width: '100%',
+                    height: '5px',
+                    backgroundColor: 'red',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                }}>
+                    <div style={{
+                        width: `${healthPercentage}%`,
+                        height: '100%',
+                        backgroundColor: 'green',
+                    }}></div>
+                </div>
+            )}
             {balls.map((ball, index) => (
                 <div key={index} style={{
                     position: 'absolute',
